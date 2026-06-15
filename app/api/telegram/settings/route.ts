@@ -1,5 +1,6 @@
 import { fail, ok, readBoolean, readString, requireUser } from "@/lib/server/api";
 import { readDb, updateDb } from "@/lib/server/db";
+import { resolveTelegramSettings } from "@/lib/server/telegram-config";
 import { maskSecret, nowIso } from "@/lib/server/utils";
 
 export const runtime = "nodejs";
@@ -11,12 +12,13 @@ export async function GET() {
   }
 
   const db = await readDb();
+  const telegramSettings = resolveTelegramSettings(db.telegram);
   return ok({
     settings: {
-      enabled: db.telegram.enabled,
-      botToken: maskSecret(db.telegram.botToken),
-      botUsername: db.telegram.botUsername,
-      webhookSecret: maskSecret(db.telegram.webhookSecret),
+      enabled: telegramSettings.enabled,
+      botToken: maskSecret(telegramSettings.botToken),
+      botUsername: telegramSettings.botUsername,
+      webhookSecret: maskSecret(telegramSettings.webhookSecret),
       updatedAt: db.telegram.updatedAt
     }
   });

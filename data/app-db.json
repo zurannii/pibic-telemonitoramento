@@ -2,7 +2,7 @@
   "meta": {
     "version": 2,
     "createdAt": "2026-06-01T23:57:17.416Z",
-    "updatedAt": "2026-06-12T15:22:32.139Z"
+    "updatedAt": "2026-06-15T22:10:31.154Z"
   },
   "users": [
     {
@@ -119,10 +119,10 @@
         0
       ],
       "active": true,
-      "lastDispatchKey": "2026-06-12@09:00",
+      "lastDispatchKey": "2026-06-15@09:00",
       "createdByUserId": "user_008d8e04-0fc9-417e-831b-75724ceba0f8",
       "createdAt": "2026-06-01T23:57:17.416Z",
-      "updatedAt": "2026-06-12T14:36:32.951Z"
+      "updatedAt": "2026-06-15T16:05:25.475Z"
     },
     {
       "id": "schedule_bb3d9353-0172-4a6c-8838-c19a4fec5c75",
@@ -139,10 +139,10 @@
         5
       ],
       "active": true,
-      "lastDispatchKey": "2026-06-12@09:00",
+      "lastDispatchKey": "2026-06-15@09:00",
       "createdByUserId": "user_f5c96a7b-f4a5-47cd-a90d-160b1733a55e",
       "createdAt": "2026-06-01T23:57:17.416Z",
-      "updatedAt": "2026-06-12T14:36:32.956Z"
+      "updatedAt": "2026-06-15T16:05:25.478Z"
     }
   ],
   "messages": [
@@ -325,6 +325,42 @@
       "providerMessageId": null,
       "whatsappMessageId": null,
       "telegramMessageId": null
+    },
+    {
+      "id": "message_74d7ef68-7fa2-4be5-a92d-5df412fa2f02",
+      "patientId": "patient_70dfbfa3-156b-423e-aef0-6c846228d27c",
+      "questionId": "question_2017445a-9586-4455-a329-c0ce8a2c6ec0",
+      "scheduleId": "schedule_f8429937-0587-4ee4-858f-ee2dd1967be0",
+      "direction": "outbound",
+      "type": "text",
+      "body": "Me diga sua dor agora de 0 a 10.",
+      "status": "failed",
+      "sentAt": null,
+      "receivedAt": null,
+      "replyToMessageId": null,
+      "errorMessage": "Integração do WhatsApp ainda não foi configurada.",
+      "channel": "whatsapp",
+      "providerMessageId": null,
+      "whatsappMessageId": null,
+      "telegramMessageId": null
+    },
+    {
+      "id": "message_c380bd03-068c-4da8-8dbe-046d7e3b8659",
+      "patientId": "patient_b4b549fa-7470-4881-ac4b-18d61792101c",
+      "questionId": "question_59ec26aa-eb91-42a1-8151-a71b58121652",
+      "scheduleId": "schedule_bb3d9353-0172-4a6c-8838-c19a4fec5c75",
+      "direction": "outbound",
+      "type": "text",
+      "body": "Como você dormiu hoje?",
+      "status": "failed",
+      "sentAt": null,
+      "receivedAt": null,
+      "replyToMessageId": null,
+      "errorMessage": "Integração do WhatsApp ainda não foi configurada.",
+      "channel": "whatsapp",
+      "providerMessageId": null,
+      "whatsappMessageId": null,
+      "telegramMessageId": null
     }
   ],
   "alerts": [
@@ -444,6 +480,32 @@
       "resolvedAt": null,
       "assignedToUserId": null,
       "sourceMessageId": "message_35f0d3a6-7e6d-4b44-9b2f-1da70aa54484"
+    },
+    {
+      "id": "alert_8ac8bbd7-0141-4c4a-939a-edbfd3401d78",
+      "patientId": "patient_70dfbfa3-156b-423e-aef0-6c846228d27c",
+      "level": "high",
+      "title": "Falha no envio via WhatsApp",
+      "description": "Integração do WhatsApp ainda não foi configurada.",
+      "type": "delivery",
+      "status": "active",
+      "createdAt": "2026-06-15T16:05:25.477Z",
+      "resolvedAt": null,
+      "assignedToUserId": null,
+      "sourceMessageId": "message_74d7ef68-7fa2-4be5-a92d-5df412fa2f02"
+    },
+    {
+      "id": "alert_24d5890a-0e36-4983-bf81-99182a8ad038",
+      "patientId": "patient_b4b549fa-7470-4881-ac4b-18d61792101c",
+      "level": "high",
+      "title": "Falha no envio via WhatsApp",
+      "description": "Integração do WhatsApp ainda não foi configurada.",
+      "type": "delivery",
+      "status": "active",
+      "createdAt": "2026-06-15T16:05:25.478Z",
+      "resolvedAt": null,
+      "assignedToUserId": null,
+      "sourceMessageId": "message_c380bd03-068c-4da8-8dbe-046d7e3b8659"
     }
   ],
   "whatsapp": {

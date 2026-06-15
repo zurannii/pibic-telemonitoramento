@@ -1,4 +1,5 @@
 import type { TelegramSettings } from "../shared/types";
+import { resolveTelegramSettings } from "./telegram-config";
 
 export type SendTelegramResult = {
   ok: boolean;
@@ -7,7 +8,8 @@ export type SendTelegramResult = {
 };
 
 export function isTelegramConfigured(settings: TelegramSettings) {
-  return Boolean(settings.enabled && settings.botToken);
+  const resolved = resolveTelegramSettings(settings);
+  return Boolean(resolved.enabled && resolved.botToken);
 }
 
 export async function sendTelegramTextMessage(
@@ -15,7 +17,9 @@ export async function sendTelegramTextMessage(
   chatId: string,
   body: string
 ): Promise<SendTelegramResult> {
-  if (!isTelegramConfigured(settings)) {
+  const resolved = resolveTelegramSettings(settings);
+
+  if (!isTelegramConfigured(resolved)) {
     return {
       ok: false,
       messageId: null,
@@ -32,7 +36,7 @@ export async function sendTelegramTextMessage(
   }
 
   try {
-    const response = await fetch(`https://api.telegram.org/bot${settings.botToken}/sendMessage`, {
+    const response = await fetch(`https://api.telegram.org/bot${resolved.botToken}/sendMessage`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

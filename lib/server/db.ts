@@ -18,6 +18,7 @@ import type {
   UserRecord
 } from "../shared/types";
 import { toPublicUser } from "./public";
+import { resolveTelegramSettings } from "./telegram-config";
 import { clone, createId, nowIso, normalizePhone } from "./utils";
 
 const DB_DIR = path.join(process.cwd(), "data");
@@ -62,7 +63,9 @@ function normalizeDbShape(value: DatabaseShape): DatabaseShape {
           telegramChatId: readOptionalString(patient.telegramChatId),
           telegramUsername: readOptionalString(patient.telegramUsername),
           telegramLinkToken: readOptionalString(patient.telegramLinkToken) ?? createTelegramLinkToken(),
-          telegramLinkedAt: readOptionalString(patient.telegramLinkedAt)
+          telegramLinkedAt:
+            readOptionalString(patient.telegramLinkedAt) ??
+            (readOptionalString(patient.telegramChatId) ? readOptionalString(patient.updatedAt) ?? now : null)
         }))
       : [],
     messages: Array.isArray(value.messages)
@@ -531,6 +534,7 @@ export async function buildPatientDetails(patientId: string, db?: DatabaseShape)
 
 export async function buildBootstrapPayload(currentUser: UserRecord): Promise<BootstrapPayload> {
   const db = await readDb();
+  const telegramSettings = resolveTelegramSettings(db.telegram);
   return {
     currentUser: toPublicUser(currentUser),
     dashboard: await buildDashboardSummary(db),
@@ -545,10 +549,10 @@ export async function buildBootstrapPayload(currentUser: UserRecord): Promise<Bo
       updatedAt: db.whatsapp.updatedAt
     },
     telegram: {
-      enabled: db.telegram.enabled,
-      botUsername: db.telegram.botUsername || null,
-      botTokenConfigured: Boolean(db.telegram.botToken),
-      webhookSecretConfigured: Boolean(db.telegram.webhookSecret),
+      enabled: telegramSettings.enabled,
+      botUsername: telegramSettings.botUsername || null,
+      botTokenConfigured: Boolean(telegramSettings.botToken),
+      webhookSecretConfigured: Boolean(telegramSettings.webhookSecret),
       updatedAt: db.telegram.updatedAt
     }
   };

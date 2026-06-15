@@ -61,7 +61,13 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (body?.age !== undefined && !Number.isNaN(Number(body.age))) patient.age = Number(body.age);
     if (body?.preferredResponseFormat) patient.preferredResponseFormat = body.preferredResponseFormat;
     if (preferredChannel === "telegram" || preferredChannel === "whatsapp") patient.preferredChannel = preferredChannel;
-    if (body?.telegramChatId !== undefined) patient.telegramChatId = telegramChatId || null;
+    if (body?.telegramChatId !== undefined) {
+      patient.telegramChatId = telegramChatId || null;
+      if (telegramChatId) {
+        patient.telegramLinkedAt = patient.telegramLinkedAt ?? nowIso();
+        patient.preferredChannel = "telegram";
+      }
+    }
     if (body?.telegramUsername !== undefined) patient.telegramUsername = telegramUsername || null;
     patient.updatedAt = nowIso();
 

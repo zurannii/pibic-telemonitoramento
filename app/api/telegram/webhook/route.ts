@@ -1,6 +1,7 @@
 import { fail, ok } from "@/lib/server/api";
 import { matchPatientByTelegramChatId, matchPatientByTelegramLinkToken, readDb, updateDb } from "@/lib/server/db";
 import { registerInboundMessage } from "@/lib/server/messaging";
+import { resolveTelegramSettings } from "@/lib/server/telegram-config";
 import { nowIso } from "@/lib/server/utils";
 
 export const runtime = "nodejs";
@@ -28,8 +29,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const db = await readDb();
+  const telegramSettings = resolveTelegramSettings(db.telegram);
   const secretHeader = request.headers.get("x-telegram-bot-api-secret-token");
-  if (db.telegram.webhookSecret && secretHeader !== db.telegram.webhookSecret) {
+  if (telegramSettings.webhookSecret && secretHeader !== telegramSettings.webhookSecret) {
     return fail(403, "Webhook do Telegram rejeitado por token invalido.");
   }
 
