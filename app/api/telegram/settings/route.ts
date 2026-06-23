@@ -1,24 +1,21 @@
 import { fail, ok, readBoolean, readString, requireUser } from "@/lib/server/api";
 import { readDb, updateDb } from "@/lib/server/db";
-import { resolveTelegramSettings } from "@/lib/server/telegram-config";
+import { registerTelegramWebhook } from "@/lib/server/telegram";
 import { maskSecret, nowIso } from "@/lib/server/utils";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   const { user, response } = await requireUser();
-  if (!user) {
-    return response;
-  }
+  if (!user) return response;
 
   const db = await readDb();
-  const telegramSettings = resolveTelegramSettings(db.telegram);
   return ok({
     settings: {
-      enabled: telegramSettings.enabled,
-      botToken: maskSecret(telegramSettings.botToken),
-      botUsername: telegramSettings.botUsername,
-      webhookSecret: maskSecret(telegramSettings.webhookSecret),
+      enabled: db.telegram.enabled,
+      botToken: maskSecret(db.telegram.botToken),
+      botUsername: db.telegram.botUsername,
+      webhookSecret: maskSecret(db.telegram.webhookSecret),
       updatedAt: db.telegram.updatedAt
     }
   });
@@ -26,24 +23,39 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   const { user, response } = await requireUser();
-  if (!user) {
-    return response;
-  }
+  if (!user) return response;
 
   const body = await request.json().catch(() => null);
+  
+  // Extrai a URL base do request para informar ao Telegram onde o webhook deve bater
+  const protocol = request.headers.get("x-forwarded-proto") || "https";
+  const host = request.headers.get("host");
+  const baseUrl = `${protocol}://${host}`;
 
-  await updateDb((db) => {
+  let webhookRegistered = false;
+
+  await updateDb(async (db) => {
     const enabled = body?.enabled !== undefined ? readBoolean(body.enabled) : db.telegram.enabled;
-    const botToken = readString(body?.botToken);
+    const botToken = readString(body?.botToken) || db.telegram.botToken;
     const botUsername = readString(body?.botUsername);
-    const webhookSecret = readString(body?.webhookSecret);
+    const webhookSecret = readString(body?.webhookSecret) || db.telegram.webhookSecret;
 
     db.telegram.enabled = enabled;
-    if (botToken) db.telegram.botToken = botToken;
+    if (botToken && body?.botToken) db.telegram.botToken = botToken;
     if (botUsername) db.telegram.botUsername = botUsername.replace(/^@/, "");
-    if (webhookSecret) db.telegram.webhookSecret = webhookSecret;
+    if (webhookSecret && body?.webhookSecret) db.telegram.webhookSecret = webhookSecret;
     db.telegram.updatedAt = nowIso();
+
+    // Se estiver ativando ou trocando o token, registra o webhook no Telegram
+    if (enabled && botToken) {
+      const webhookUrl = `${baseUrl}/api/telegram/webhook`;
+      webhookRegistered = await registerTelegramWebhook(botToken, webhookUrl, webhookSecret);
+    }
   });
 
-  return ok({ success: true });
+  if (!webhookRegistered && body?.enabled) {
+    return fail(400, "Configuração salva, mas o Telegram recusou o Webhook. Verifique o Token.");
+  }
+
+  return ok({ success: true, webhookRegistered });
 }
