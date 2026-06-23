@@ -1,4 +1,4 @@
-import { fail, ok, readBoolean, readString, requireUser } from "@/lib/server/api";
+import { ok, readBoolean, readString, requireUser } from "@/lib/server/api";
 import { readDb, updateDb } from "@/lib/server/db";
 import { registerTelegramWebhook } from "@/lib/server/telegram";
 import { maskSecret, nowIso } from "@/lib/server/utils";
@@ -26,19 +26,17 @@ export async function PATCH(request: Request) {
   if (!user) return response;
 
   const body = await request.json().catch(() => null);
-  
-  // Extrai a URL base do request para informar ao Telegram onde o webhook deve bater
-  const protocol = request.headers.get("x-forwarded-proto") || "https";
-  const host = request.headers.get("host");
-  const baseUrl = `${protocol}://${host}`;
+  const baseUrl = new URL(request.url).origin;
 
-  let webhookRegistered = false;
+  let pendingWebhookRegistration = false;
+  let targetBotToken = "";
+  let targetWebhookSecret = "";
 
-  await updateDb(async (db) => {
+  await updateDb((db) => {
     const enabled = body?.enabled !== undefined ? readBoolean(body.enabled) : db.telegram.enabled;
-    const botToken = readString(body?.botToken) || db.telegram.botToken;
-    const botUsername = readString(body?.botUsername);
-    const webhookSecret = readString(body?.webhookSecret) || db.telegram.webhookSecret;
+    const botToken = readString(body?.botToken).trim() || db.telegram.botToken;
+    const botUsername = readString(body?.botUsername).trim();
+    const webhookSecret = readString(body?.webhookSecret).trim() || db.telegram.webhookSecret;
 
     db.telegram.enabled = enabled;
     if (botToken && body?.botToken) db.telegram.botToken = botToken;
@@ -46,16 +44,29 @@ export async function PATCH(request: Request) {
     if (webhookSecret && body?.webhookSecret) db.telegram.webhookSecret = webhookSecret;
     db.telegram.updatedAt = nowIso();
 
-    // Se estiver ativando ou trocando o token, registra o webhook no Telegram
     if (enabled && botToken) {
-      const webhookUrl = `${baseUrl}/api/telegram/webhook`;
-      webhookRegistered = await registerTelegramWebhook(botToken, webhookUrl, webhookSecret);
+      pendingWebhookRegistration = true;
+      targetBotToken = botToken;
+      targetWebhookSecret = webhookSecret;
     }
   });
 
-  if (!webhookRegistered && body?.enabled) {
-    return fail(400, "Configuração salva, mas o Telegram recusou o Webhook. Verifique o Token.");
+  let webhookRegistered = false;
+  let warning: string | null = null;
+
+  if (pendingWebhookRegistration) {
+    const webhookUrl = `${baseUrl}/api/telegram/webhook`;
+    webhookRegistered = await registerTelegramWebhook(targetBotToken, webhookUrl, targetWebhookSecret);
+
+    if (!webhookRegistered) {
+      warning =
+        "Configurações salvas, mas o Telegram não confirmou o webhook. Verifique a URL HTTPS pública e tente novamente.";
+    }
   }
 
-  return ok({ success: true, webhookRegistered });
+  return ok({
+    success: true,
+    webhookRegistered,
+    warning
+  });
 }

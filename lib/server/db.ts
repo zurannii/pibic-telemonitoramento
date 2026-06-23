@@ -23,6 +23,9 @@ import { clone, createId, nowIso, normalizePhone } from "./utils";
 
 const DB_DIR = path.join(process.cwd(), "data");
 const DB_PATH = path.join(DB_DIR, "app-db.json");
+const IS_VERCEL = process.env.VERCEL === "1";
+const RUNTIME_DB_DIR = IS_VERCEL ? "/tmp" : DB_DIR;
+const RUNTIME_DB_PATH = IS_VERCEL ? "/tmp/app-db.json" : DB_PATH;
 
 let dbCache: DatabaseShape | null = null;
 let writeQueue: Promise<unknown> = Promise.resolve();
@@ -340,13 +343,19 @@ async function buildSeedDatabase() {
 }
 
 async function ensureDbExists() {
-  await fs.mkdir(DB_DIR, { recursive: true });
+  await fs.mkdir(RUNTIME_DB_DIR, { recursive: true });
 
   try {
-    await fs.access(DB_PATH);
+    await fs.access(RUNTIME_DB_PATH);
   } catch {
-    const seed = await buildSeedDatabase();
-    await fs.writeFile(DB_PATH, JSON.stringify(seed, null, 2), "utf8");
+    try {
+      const snapshot = await fs.readFile(DB_PATH, "utf8");
+      await fs.writeFile(RUNTIME_DB_PATH, snapshot, "utf8");
+      return;
+    } catch {
+      const seed = await buildSeedDatabase();
+      await fs.writeFile(RUNTIME_DB_PATH, JSON.stringify(seed, null, 2), "utf8");
+    }
   }
 }
 
@@ -356,7 +365,7 @@ export async function readDb() {
   }
 
   await ensureDbExists();
-  const contents = await fs.readFile(DB_PATH, "utf8");
+  const contents = await fs.readFile(RUNTIME_DB_PATH, "utf8");
   dbCache = normalizeDbShape(JSON.parse(contents) as DatabaseShape);
   return clone(dbCache);
 }
@@ -364,7 +373,7 @@ export async function readDb() {
 export async function writeDb(nextDb: DatabaseShape) {
   const normalized = normalizeDbShape(nextDb);
   dbCache = clone(normalized);
-  await fs.writeFile(DB_PATH, JSON.stringify(normalized, null, 2), "utf8");
+  await fs.writeFile(RUNTIME_DB_PATH, JSON.stringify(normalized, null, 2), "utf8");
 }
 
 export async function updateDb<T>(updater: (db: DatabaseShape) => Promise<T> | T) {

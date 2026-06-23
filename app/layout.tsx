@@ -3,8 +3,8 @@ import "./globals.css";
 import { ensureSchedulerStarted } from "@/lib/server/scheduler";
 
 export const metadata: Metadata = {
-  title: "Plataforma de Telemonitoramento",
-  description: "Dashboard multipagina inspirado no design do Figma para o projeto PIBIC."
+  title: "Telemonitoramento Clinico | PIBIC",
+  description: "Dashboard clinico de telemonitoramento com foco em pacientes, equipe e integrações."
 };
 
 export default function RootLayout({

@@ -201,6 +201,10 @@ export function ensureSchedulerStarted() {
     return;
   }
 
+  if (process.env.NODE_ENV !== "development" || process.env.VERCEL === "1") {
+    return;
+  }
+
   if (global.__telemonitor_scheduler_started__) {
     return;
   }

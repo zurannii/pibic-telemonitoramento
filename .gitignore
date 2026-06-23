@@ -5,3 +5,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 dist
+
+# Environment variables and local secrets
+.env
+.env.*
+!.env.example
+
+/generated/prisma

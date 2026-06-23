@@ -1,78 +1,149 @@
+import crypto from "node:crypto";
+
 import { fail, ok } from "@/lib/server/api";
-import { matchPatientByTelegramChatId, matchPatientByTelegramLinkToken, readDb, updateDb } from "@/lib/server/db";
+import { matchPatientByPhone, readDb, updateDb } from "@/lib/server/db";
 import { registerInboundMessage } from "@/lib/server/messaging";
-import { nowIso } from "@/lib/server/utils";
 
 export const runtime = "nodejs";
 
-// Extrai o payload do comando /start
-function extractStartToken(text: string): string | null {
-  const match = text.trim().match(/^\/start(?:@\w+)?(?:\s+(.+))?$/i);
-  return match?.[1]?.trim() || null;
+function verifyMetaSignature(rawBody: string, signatureHeader: string | null, appSecret: string) {
+  if (!appSecret) {
+    return true;
+  }
+
+  if (!signatureHeader?.startsWith("sha256=")) {
+    return false;
+  }
+
+  const signature = signatureHeader.slice("sha256=".length);
+  const digest = crypto.createHmac("sha256", appSecret).update(rawBody).digest("hex");
+
+  if (signature.length !== digest.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest));
 }
 
-export async function GET() {
-  return ok({ status: "Telegram Webhook is Active" });
+function extractMessageBody(message: Record<string, unknown>) {
+  const text = message.text as { body?: unknown } | undefined;
+  if (typeof text?.body === "string" && text.body.trim()) {
+    return text.body.trim();
+  }
+
+  if (message.audio || message.voice) {
+    return "[Áudio recebido pelo WhatsApp]";
+  }
+
+  return "[Mensagem recebida pelo WhatsApp]";
+}
+
+function extractMessages(payload: unknown) {
+  if (!payload || typeof payload !== "object") {
+    return [] as Array<Record<string, unknown>>;
+  }
+
+  const entries = Array.isArray((payload as { entry?: unknown }).entry)
+    ? ((payload as { entry?: unknown }).entry as unknown[])
+    : [];
+
+  const messages: Array<Record<string, unknown>> = [];
+  for (const entry of entries) {
+    const changes = Array.isArray((entry as { changes?: unknown }).changes)
+      ? ((entry as { changes?: unknown }).changes as unknown[])
+      : [];
+
+    for (const change of changes) {
+      const value = (change as { value?: unknown }).value as
+        | {
+            messages?: unknown;
+          }
+        | undefined;
+
+      if (!value || !Array.isArray(value.messages)) {
+        continue;
+      }
+
+      for (const message of value.messages) {
+        if (message && typeof message === "object") {
+          messages.push(message as Record<string, unknown>);
+        }
+      }
+    }
+  }
+
+  return messages;
+}
+
+export async function GET(request: Request) {
+  const db = await readDb();
+  const url = new URL(request.url);
+
+  const mode = url.searchParams.get("hub.mode");
+  const verifyToken = url.searchParams.get("hub.verify_token");
+  const challenge = url.searchParams.get("hub.challenge");
+
+  if (mode === "subscribe" && verifyToken && verifyToken === db.whatsapp.verifyToken && challenge) {
+    return new Response(challenge, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8"
+      }
+    });
+  }
+
+  if (!mode && !verifyToken && !challenge) {
+    return ok({ status: "WhatsApp Webhook is Active" });
+  }
+
+  return fail(403, "Webhook do WhatsApp rejeitado.");
 }
 
 export async function POST(request: Request) {
   const db = await readDb();
-  
-  // Segurança: Valida o Secret Token do Webhook
-  const secretHeader = request.headers.get("x-telegram-bot-api-secret-token");
-  if (db.telegram.webhookSecret && secretHeader !== db.telegram.webhookSecret) {
-    return fail(403, "Acesso Negado: Token de webhook inválido.");
+  const rawBody = await request.text();
+
+  if (!verifyMetaSignature(rawBody, request.headers.get("x-hub-signature-256"), db.whatsapp.appSecret)) {
+    return fail(403, "Assinatura do webhook do WhatsApp invalida.");
   }
 
-  const payload = await request.json().catch(() => null);
-  if (!payload?.message?.chat?.id) return ok({ received: true }); // Ignora atualizações irrelevantes
+  let payload: unknown = null;
+  try {
+    payload = rawBody ? JSON.parse(rawBody) : null;
+  } catch {
+    return fail(400, "Payload do WhatsApp invalido.");
+  }
+
+  const messages = extractMessages(payload);
+
+  if (!messages.length) {
+    return ok({ received: true });
+  }
 
   await updateDb((currentDb) => {
-    const message = payload.message;
-    const chatId = String(message.chat.id);
-    const text = typeof message.text === "string" ? message.text.trim() : "";
-    const username = message.from?.username || message.chat.username || null;
-    const startToken = extractStartToken(text);
-
-    // Identificação do Paciente
-    let patient = matchPatientByTelegramChatId(currentDb, chatId);
-
-    if (!patient && startToken) {
-      patient = matchPatientByTelegramLinkToken(currentDb, startToken);
-      if (patient) {
-        // Vincula o paciente ao chat do Telegram
-        patient.telegramChatId = chatId;
-        patient.telegramUsername = username;
-        patient.telegramLinkedAt = nowIso();
-        patient.preferredChannel = "telegram";
-        patient.updatedAt = nowIso();
+    for (const message of messages) {
+      const fromPhone = typeof message.from === "string" ? message.from : "";
+      if (!fromPhone) {
+        continue;
       }
-    }
 
-    if (!patient) return; // Paciente desconhecido, encerra o fluxo
+      const patient = matchPatientByPhone(currentDb, fromPhone);
+      if (!patient) {
+        continue;
+      }
 
-    // Tratamento de mensagens de sistema vs mensagens de rotina
-    if (text.startsWith("/start")) {
+      const providerMessageId = typeof message.id === "string" ? message.id : null;
+      const text = extractMessageBody(message);
+      const messageType = message.audio || message.voice ? "audio" : "text";
+
       registerInboundMessage(currentDb, patient, {
-        body: startToken ? "✅ *Telegram vinculado com sucesso!*" : "Iniciou o bot.",
-        channel: "telegram",
+        body: text,
+        channel: "whatsapp",
         metadata: message,
-        providerMessageId: String(message.message_id),
-        type: "text",
-        allowReplyAssociation: false,
+        providerMessageId,
+        type: messageType
       });
-      return;
     }
-
-    // Registra mensagens comuns
-    const isAudio = Boolean(message.voice || message.audio);
-    registerInboundMessage(currentDb, patient, {
-      body: isAudio ? "[Áudio Recebido]" : (text || "[Mídia Recebida]"),
-      channel: "telegram",
-      metadata: message,
-      providerMessageId: String(message.message_id),
-      type: isAudio ? "audio" : "text"
-    });
   });
 
   return ok({ received: true });
