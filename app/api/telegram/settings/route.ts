@@ -1,6 +1,7 @@
 import { ok, readBoolean, readString, requireUser } from "@/lib/server/api";
 import { readDb, updateDb } from "@/lib/server/db";
 import { registerTelegramWebhook } from "@/lib/server/telegram";
+import { resolveTelegramSettings } from "@/lib/server/telegram-config";
 import { maskSecret, nowIso } from "@/lib/server/utils";
 
 export const runtime = "nodejs";
@@ -10,12 +11,13 @@ export async function GET() {
   if (!user) return response;
 
   const db = await readDb();
+  const settings = resolveTelegramSettings(db.telegram);
   return ok({
     settings: {
-      enabled: db.telegram.enabled,
-      botToken: maskSecret(db.telegram.botToken),
-      botUsername: db.telegram.botUsername,
-      webhookSecret: maskSecret(db.telegram.webhookSecret),
+      enabled: settings.enabled,
+      botToken: maskSecret(settings.botToken),
+      botUsername: settings.botUsername,
+      webhookSecret: maskSecret(settings.webhookSecret),
       updatedAt: db.telegram.updatedAt
     }
   });
@@ -33,14 +35,15 @@ export async function PATCH(request: Request) {
   let targetWebhookSecret = "";
 
   await updateDb((db) => {
-    const enabled = body?.enabled !== undefined ? readBoolean(body.enabled) : db.telegram.enabled;
-    const botToken = readString(body?.botToken).trim() || db.telegram.botToken;
-    const botUsername = readString(body?.botUsername).trim();
-    const webhookSecret = readString(body?.webhookSecret).trim() || db.telegram.webhookSecret;
+    const resolved = resolveTelegramSettings(db.telegram);
+    const enabled = body?.enabled !== undefined ? readBoolean(body.enabled) : resolved.enabled;
+    const botToken = readString(body?.botToken).trim() || resolved.botToken;
+    const botUsername = readString(body?.botUsername).trim() || resolved.botUsername;
+    const webhookSecret = readString(body?.webhookSecret).trim() || resolved.webhookSecret;
 
     db.telegram.enabled = enabled;
     if (botToken && body?.botToken) db.telegram.botToken = botToken;
-    if (botUsername) db.telegram.botUsername = botUsername.replace(/^@/, "");
+    if (body?.botUsername && botUsername) db.telegram.botUsername = botUsername.replace(/^@/, "");
     if (webhookSecret && body?.webhookSecret) db.telegram.webhookSecret = webhookSecret;
     db.telegram.updatedAt = nowIso();
 

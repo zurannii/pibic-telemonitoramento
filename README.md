@@ -2,7 +2,7 @@
 
 Sistema web para acompanhamento remoto de pacientes, organizacao da equipe clinica, criacao de perguntas, agendamento de rotinas e comunicacao por Telegram e WhatsApp.
 
-O projeto usa Next.js com App Router, React e TypeScript. No estado atual, os dados ainda sao armazenados em JSON. O Prisma esta instalado e preparado para uma futura migracao para PostgreSQL, mas ainda nao substitui o arquivo JSON.
+O projeto usa Next.js com App Router, React, TypeScript, Prisma e PostgreSQL. Quando `DATABASE_URL` esta configurada, todas as funcoes Serverless compartilham o mesmo banco. Sem essa variavel, o JSON permanece disponivel apenas como fallback de desenvolvimento.
 
 ## Funcionalidades
 
@@ -22,7 +22,7 @@ O projeto usa Next.js com App Router, React e TypeScript. No estado atual, os da
 - TypeScript;
 - CSS Modules;
 - Node.js runtime nas rotas de API;
-- Prisma e PostgreSQL preparados para migracao futura;
+- Prisma 7 com PostgreSQL/Supabase;
 - Telegram Bot API;
 - WhatsApp Cloud API da Meta.
 
@@ -104,9 +104,10 @@ Troque ou remova essas credenciais antes de utilizar o sistema com dados reais.
 | `TELEGRAM_BOT_TOKEN` | Para Telegram | Token entregue pelo `@BotFather`. |
 | `TELEGRAM_BOT_USERNAME` | Para links Telegram | Username do bot, sem necessidade do `@`. |
 | `TELEGRAM_WEBHOOK_SECRET` | Recomendado | Valida as requisicoes recebidas do Telegram. |
-| `DATABASE_URL` | Somente apos a migracao | Conexao PostgreSQL usada pelo Prisma. |
+| `DATABASE_URL` | Sim em producao | Transaction Pooler do Supabase usado pela aplicacao. |
+| `DIRECT_URL` | Para migrations locais | Conexao direta ou Session Pooler usada pelo Prisma CLI. |
 
-Os dados do WhatsApp ainda sao configurados pela tela **Equipe** e armazenados no banco JSON. Por isso, no Vercel eles continuam sujeitos a perda enquanto a migracao para PostgreSQL nao for concluida.
+As configuracoes do WhatsApp e Telegram tambem sao persistidas no PostgreSQL. Em producao, as variaveis `TELEGRAM_*` possuem prioridade sobre valores antigos armazenados no banco.
 
 Nunca envie `.env`, tokens, senhas ou segredos para o repositorio. O Git ignora esses arquivos e mantem apenas o `.env.example` como modelo.
 
@@ -136,13 +137,12 @@ O projeto ainda nao possui scripts de lint ou testes automatizados no `package.j
 
 O acesso aos dados esta centralizado em `lib/server/db.ts`.
 
-- localmente, a aplicacao le e grava `data/app-db.json`;
-- no Vercel, a aplicacao copia o JSON inicial para `/tmp/app-db.json`;
-- `/tmp` permite escrita e evita o erro 500 causado pelo sistema de arquivos somente leitura;
-- `/tmp` e temporario: reinicios, novas instancias e cold starts podem descartar os dados;
-- duas instancias Serverless podem manter copias diferentes do arquivo.
+- com `DATABASE_URL`, a aplicacao usa as tabelas PostgreSQL por meio do Prisma;
+- as escritas sao executadas em transacoes com lock para evitar atualizacoes concorrentes;
+- localmente, sem `DATABASE_URL`, a aplicacao usa `data/app-db.json`;
+- no Vercel, o fallback ainda usa `/tmp/app-db.json`, mas nao deve ser usado apos ativar o PostgreSQL.
 
-Portanto, o uso de `/tmp` e apenas uma compatibilidade temporaria. Nao use essa persistencia para dados clinicos reais.
+Nunca publique em producao sem `DATABASE_URL`. O fallback `/tmp` existe apenas para impedir uma quebra durante a transicao.
 
 ## Telegram
 
@@ -240,6 +240,7 @@ vercel env add TELEGRAM_ENABLED production
 vercel env add TELEGRAM_BOT_TOKEN production
 vercel env add TELEGRAM_BOT_USERNAME production
 vercel env add TELEGRAM_WEBHOOK_SECRET production
+vercel env add DATABASE_URL production
 ```
 
 Publique em producao:
@@ -250,60 +251,63 @@ vercel --prod
 
 Depois do deploy, salve novamente as configuracoes do Telegram para registrar o dominio de producao. Configure a URL de producao do WhatsApp no painel da Meta.
 
-## Prisma e migracao para PostgreSQL
+## Ativacao do Supabase/PostgreSQL
 
-O repositorio ja possui Prisma, `prisma.config.ts` e `prisma/schema.prisma`. Entretanto, o schema ainda nao contem os modelos do sistema e `lib/server/db.ts` continua sendo a fonte de dados.
+O schema normalizado e a migration inicial ja estao versionados. As tabelas incluem usuarios, pacientes, perguntas, rotinas, mensagens, alertas e configuracoes dos provedores.
 
-Antes de executar a primeira migracao, modele no Prisma pelo menos:
+### 1. Criar o banco
 
-- User;
-- Patient;
-- Question;
-- Schedule;
-- Message;
-- Alert;
-- WhatsAppSettings;
-- TelegramSettings;
-- Session, caso as sessoes tambem sejam persistidas.
+Crie um projeto no Supabase e, na area de conexao do banco, copie:
 
-Depois de criar os modelos e configurar `DATABASE_URL`, valide e formate o schema:
+- a URL do **Transaction Pooler** para `DATABASE_URL`;
+- a URL de conexao direta ou **Session Pooler** para `DIRECT_URL`.
 
-```bash
-npx prisma format
-npx prisma validate
+Guarde essas URLs apenas no `.env` local e nas variaveis protegidas do Vercel. Nao envie as URLs em mensagens ou commits.
+
+### 2. Configurar o ambiente local
+
+```env
+DATABASE_URL="URL_DO_TRANSACTION_POOLER"
+DIRECT_URL="URL_DIRETA_OU_SESSION_POOLER"
 ```
 
-Crie a migracao local:
+### 3. Validar e aplicar a migration
 
 ```bash
-npx prisma migrate dev --name initial_schema
-npx prisma generate
+npm run db:generate
+npm run db:validate
+npm run db:migrate:deploy
 ```
 
-Inspecione o banco durante o desenvolvimento:
+### 4. Importar o JSON existente
+
+Execute somente uma vez em um banco novo. O comando sincroniza o conteudo de `data/app-db.json` com o PostgreSQL:
 
 ```bash
-npx prisma studio
+npm run db:import-json -- --confirm
 ```
 
-No ambiente de producao, aplique apenas migracoes ja versionadas:
+Depois da importacao, confira os dados:
 
 ```bash
-npx prisma migrate deploy
+npm run db:check
+npm run db:studio
 ```
 
-Nao execute `prisma migrate dev` em producao. Tambem nao execute a migracao inicial antes de implementar os modelos, o cliente Prisma e o script de importacao de `data/app-db.json`.
+### 5. Ativar no Vercel
 
-Fluxo recomendado para concluir a migracao:
+Adicione apenas a URL de runtime ao ambiente Production:
 
-1. modelar as entidades em `prisma/schema.prisma`;
-2. criar e revisar a migracao;
-3. implementar uma camada de repositorios usando Prisma;
-4. criar um script idempotente para importar o JSON;
-5. testar a importacao em um banco de homologacao;
-6. trocar as rotas para os repositorios;
-7. aplicar `npx prisma migrate deploy` no Vercel;
-8. remover a dependencia de escrita em `/tmp`.
+```bash
+vercel env add DATABASE_URL production
+vercel --prod
+```
+
+`DIRECT_URL` nao e necessaria para a aplicacao em execucao. Ela deve ficar no ambiente seguro usado para aplicar migrations.
+
+Depois do deploy, salve novamente a integracao Telegram para registrar o webhook no dominio de producao e crie novamente qualquer paciente que tenha existido apenas no `/tmp` do Vercel.
+
+Para futuras alteracoes no schema, use `npm run db:migrate -- --name nome_da_migration` em desenvolvimento e `npm run db:migrate:deploy` na publicacao.
 
 ## Agendamentos
 
@@ -320,6 +324,7 @@ Para producao, crie uma rota protegida de processamento e acione-a com Vercel Cr
 | `/api/auth/logout` | `POST` | Encerramento da sessao. |
 | `/api/auth/session` | `GET` | Consulta da sessao atual. |
 | `/api/bootstrap` | `GET` | Dados iniciais do dashboard. |
+| `/api/health` | `GET` | Verifica se o PostgreSQL esta ativo, sem expor segredos. |
 | `/api/patients` | `GET`, `POST` | Listagem e cadastro de pacientes. |
 | `/api/patients/[patientId]` | `GET`, `PATCH`, `DELETE` | Detalhes, edicao e exclusao. |
 | `/api/patients/[patientId]/schedules` | `POST`, `PATCH`, `DELETE` | Rotinas do paciente. |
@@ -352,7 +357,10 @@ lib/
 data/
   app-db.json             Banco JSON local
 prisma/
-  schema.prisma           Schema PostgreSQL em preparacao
+  schema.prisma           Schema PostgreSQL normalizado
+  migrations/             Migrations versionadas
+scripts/
+  import-json-to-postgres.ts  Importacao unica do JSON
 ```
 
 ## Verificacao antes de publicar
@@ -371,14 +379,14 @@ Confirme tambem:
 - Webhook Secret do Telegram configurada;
 - Verify Token e App Secret do WhatsApp configurados;
 - credenciais de demonstracao removidas;
-- banco PostgreSQL concluido antes de armazenar dados clinicos reais;
+- `DATABASE_URL` apontando para o banco PostgreSQL de producao;
 - politica de backup, controle de acesso, auditoria e adequacao a LGPD.
 
 ## Problemas comuns
 
 ### Erro 500 ao salvar no Vercel
 
-O projeto usa `/tmp/app-db.json` no Vercel. Verifique os logs da funcao, mas lembre que `/tmp` nao oferece persistencia. A solucao definitiva e PostgreSQL.
+Confirme que `DATABASE_URL` esta configurada em Production e que `npm run db:migrate:deploy` foi executado. Sem essa variavel, o fallback usa `/tmp` e nao oferece persistencia.
 
 ### Telegram salva, mas o webhook nao registra
 
@@ -396,4 +404,12 @@ O projeto usa `/tmp/app-db.json` no Vercel. Verifique os logs da funcao, mas lem
 
 ### Dados desaparecem no Vercel
 
-Esse comportamento e esperado com `/tmp`. Conclua a migracao para PostgreSQL antes do uso real.
+Esse comportamento indica que `DATABASE_URL` nao esta ativa no deploy atual. Configure a variavel em Production e faca um novo deploy.
+
+### Confirmar a conexao PostgreSQL
+
+Abra `https://SEU_DOMINIO/api/health`. A resposta correta em producao e:
+
+```json
+{"ok":true,"database":"postgresql"}
+```

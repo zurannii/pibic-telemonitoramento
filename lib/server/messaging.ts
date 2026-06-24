@@ -7,6 +7,7 @@ import type {
 } from "../shared/types";
 import { updatePatientStatusFromAlerts } from "./db";
 import { sendTelegramTextMessage } from "./telegram";
+import { resolveTelegramSettings } from "./telegram-config";
 import { createId, normalizePhone, nowIso } from "./utils";
 import { sendWhatsAppTextMessage } from "./whatsapp";
 
@@ -56,7 +57,11 @@ export async function sendTextToPatientChannel(
   const channel = resolvePatientChannel(patient, preferredChannel);
 
   if (channel === "telegram") {
-    const result = await sendTelegramTextMessage(db.telegram, patient.telegramChatId ?? "", body);
+    const result = await sendTelegramTextMessage(
+      resolveTelegramSettings(db.telegram),
+      patient.telegramChatId ?? "",
+      body
+    );
     return {
       channel,
       ...result

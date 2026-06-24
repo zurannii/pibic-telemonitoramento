@@ -24,8 +24,8 @@ export function resolveTelegramSettings(settings: TelegramSettings): TelegramSet
   return {
     ...settings,
     enabled: settings.enabled || env.enabled,
-    botToken: settings.botToken || env.botToken,
-    botUsername: settings.botUsername || env.botUsername,
-    webhookSecret: settings.webhookSecret || env.webhookSecret
+    botToken: env.botToken || settings.botToken,
+    botUsername: env.botUsername || settings.botUsername,
+    webhookSecret: env.webhookSecret || settings.webhookSecret
   };
 }

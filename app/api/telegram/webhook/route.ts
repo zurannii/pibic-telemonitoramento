@@ -1,6 +1,7 @@
 import { fail, ok } from "@/lib/server/api";
 import { matchPatientByTelegramChatId, matchPatientByTelegramLinkToken, readDb, updateDb } from "@/lib/server/db";
 import { registerInboundMessage } from "@/lib/server/messaging";
+import { sendTelegramTextMessage } from "@/lib/server/telegram";
 import { resolveTelegramSettings } from "@/lib/server/telegram-config";
 import { nowIso } from "@/lib/server/utils";
 
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
     return fail(400, "Payload invalido.");
   }
 
-  await updateDb((currentDb) => {
+  const result = await updateDb((currentDb) => {
     const update = payload as {
       message?: {
         message_id?: number;
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
 
     const message = update.message;
     if (!message?.chat?.id) {
-      return;
+      return null;
     }
 
     const chatId = String(message.chat.id);
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
     }
 
     if (!patient) {
-      return;
+      return null;
     }
 
     if (text.startsWith("/start")) {
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
         allowReplyAssociation: false,
         replyToMessageId: null
       });
-      return;
+      return { chatId, patientName: patient.name, started: true };
     }
 
     registerInboundMessage(currentDb, patient, {
@@ -102,7 +103,16 @@ export async function POST(request: Request) {
       providerMessageId: message.message_id ? String(message.message_id) : null,
       type: message.voice || message.audio ? "audio" : "text"
     });
+    return { chatId, patientName: patient.name, started: false };
   });
+
+  if (result?.started) {
+    await sendTelegramTextMessage(
+      telegramSettings,
+      result.chatId,
+      `Vinculo realizado com sucesso para ${result.patientName}.`
+    );
+  }
 
   return ok({ received: true });
 }

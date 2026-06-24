@@ -18,6 +18,12 @@ import type {
   UserRecord
 } from "../shared/types";
 import { toPublicUser } from "./public";
+import { hasPostgresDatabase } from "./prisma";
+import {
+  readPostgresDatabase,
+  updatePostgresDatabase,
+  writePostgresDatabase
+} from "./postgres-store";
 import { resolveTelegramSettings } from "./telegram-config";
 import { clone, createId, nowIso, normalizePhone } from "./utils";
 
@@ -360,6 +366,10 @@ async function ensureDbExists() {
 }
 
 export async function readDb() {
+  if (hasPostgresDatabase()) {
+    return normalizeDbShape(await readPostgresDatabase());
+  }
+
   if (dbCache) {
     return clone(dbCache);
   }
@@ -372,11 +382,21 @@ export async function readDb() {
 
 export async function writeDb(nextDb: DatabaseShape) {
   const normalized = normalizeDbShape(nextDb);
+
+  if (hasPostgresDatabase()) {
+    await writePostgresDatabase(normalized);
+    return;
+  }
+
   dbCache = clone(normalized);
   await fs.writeFile(RUNTIME_DB_PATH, JSON.stringify(normalized, null, 2), "utf8");
 }
 
 export async function updateDb<T>(updater: (db: DatabaseShape) => Promise<T> | T) {
+  if (hasPostgresDatabase()) {
+    return updatePostgresDatabase(updater);
+  }
+
   const job = writeQueue.then(async () => {
     const db = await readDb();
     db.meta.updatedAt = nowIso();
