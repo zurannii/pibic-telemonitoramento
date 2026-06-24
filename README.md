@@ -335,6 +335,7 @@ Para producao, crie uma rota protegida de processamento e acione-a com Vercel Cr
 | `/api/users` | `GET`, `POST` | Equipe profissional. |
 | `/api/users/[userId]` | `PATCH`, `DELETE` | Edicao e exclusao de profissional. |
 | `/api/telegram/settings` | `GET`, `PATCH` | Configuracao autenticada do Telegram. |
+| `/api/telegram/status` | `GET` | Diagnostico seguro do webhook registrado. |
 | `/api/telegram/webhook` | `GET`, `POST` | Recebimento de eventos do Telegram. |
 | `/api/whatsapp/settings` | `GET`, `PATCH` | Configuracao autenticada do WhatsApp. |
 | `/api/whatsapp/webhook` | `GET`, `POST` | Verificacao e eventos da Meta. |

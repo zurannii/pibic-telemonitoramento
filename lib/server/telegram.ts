@@ -12,6 +12,15 @@ export type SendTelegramResult = {
   error: string | null;
 };
 
+export type TelegramDiagnostics = {
+  botUsername: string | null;
+  lastErrorDate: string | null;
+  lastErrorMessage: string | null;
+  ok: boolean;
+  pendingUpdateCount: number;
+  webhookUrl: string | null;
+};
+
 export function isTelegramConfigured(settings: TelegramSettings): boolean {
   return Boolean(settings.enabled && settings.botToken);
 }
@@ -40,6 +49,57 @@ export async function registerTelegramWebhook(
   } catch (error) {
     console.error("Erro ao registrar webhook do Telegram:", error);
     return false;
+  }
+}
+
+export async function getTelegramDiagnostics(
+  settings: TelegramSettings
+): Promise<TelegramDiagnostics> {
+  if (!settings.botToken) {
+    return {
+      botUsername: null,
+      lastErrorDate: null,
+      lastErrorMessage: "Bot Token nao configurado.",
+      ok: false,
+      pendingUpdateCount: 0,
+      webhookUrl: null
+    };
+  }
+
+  try {
+    const apiBase = `https://api.telegram.org/bot${settings.botToken}`;
+    const [botResponse, webhookResponse] = await Promise.all([
+      fetch(`${apiBase}/getMe`, { cache: "no-store" }),
+      fetch(`${apiBase}/getWebhookInfo`, { cache: "no-store" })
+    ]);
+    const bot = (await botResponse.json()) as TelegramApiResponse<{ username?: string }>;
+    const webhook = (await webhookResponse.json()) as TelegramApiResponse<{
+      last_error_date?: number;
+      last_error_message?: string;
+      pending_update_count?: number;
+      url?: string;
+    }>;
+    const lastErrorDate = webhook.result?.last_error_date
+      ? new Date(webhook.result.last_error_date * 1000).toISOString()
+      : null;
+
+    return {
+      botUsername: bot.result?.username ?? null,
+      lastErrorDate,
+      lastErrorMessage: webhook.result?.last_error_message ?? webhook.description ?? null,
+      ok: Boolean(bot.ok && webhook.ok),
+      pendingUpdateCount: webhook.result?.pending_update_count ?? 0,
+      webhookUrl: webhook.result?.url || null
+    };
+  } catch (error) {
+    return {
+      botUsername: null,
+      lastErrorDate: null,
+      lastErrorMessage: error instanceof Error ? error.message : "Falha ao consultar o Telegram.",
+      ok: false,
+      pendingUpdateCount: 0,
+      webhookUrl: null
+    };
   }
 }
 

@@ -80,6 +80,9 @@ export async function POST(request: Request) {
     }
 
     if (!patient) {
+      console.warn("Webhook do Telegram recebeu mensagem sem paciente correspondente.", {
+        hasStartToken: Boolean(startToken)
+      });
       return null;
     }
 
