@@ -100,6 +100,7 @@ Troque ou remova essas credenciais antes de utilizar o sistema com dados reais.
 | Variavel | Obrigatoria | Finalidade |
 | --- | --- | --- |
 | `SESSION_SECRET` | Sim em producao | Assina o cookie da sessao. |
+| `APP_URL` | Opcional | Dominio canonico usado para registrar webhooks. |
 | `TELEGRAM_ENABLED` | Nao | Ativa o Telegram por configuracao de ambiente. |
 | `TELEGRAM_BOT_TOKEN` | Para Telegram | Token entregue pelo `@BotFather`. |
 | `TELEGRAM_BOT_USERNAME` | Para links Telegram | Username do bot, sem necessidade do `@`. |

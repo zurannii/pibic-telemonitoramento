@@ -1,7 +1,7 @@
 import { ok, readBoolean, readString, requireUser } from "@/lib/server/api";
 import { readDb, updateDb } from "@/lib/server/db";
 import { registerTelegramWebhook } from "@/lib/server/telegram";
-import { resolveTelegramSettings } from "@/lib/server/telegram-config";
+import { resolvePublicAppUrl, resolveTelegramSettings } from "@/lib/server/telegram-config";
 import { maskSecret, nowIso } from "@/lib/server/utils";
 
 export const runtime = "nodejs";
@@ -28,7 +28,7 @@ export async function PATCH(request: Request) {
   if (!user) return response;
 
   const body = await request.json().catch(() => null);
-  const baseUrl = new URL(request.url).origin;
+  const baseUrl = resolvePublicAppUrl(request);
 
   let pendingWebhookRegistration = false;
   let targetBotToken = "";
