@@ -1,4 +1,8 @@
 import type { TelegramSettings } from "../shared/types";
+import { RequestTimeoutError, fetchWithTimeout } from "./http";
+
+const TELEGRAM_REQUEST_TIMEOUT_MS = 15_000;
+const TELEGRAM_MAX_DOWNLOAD_SIZE = 20 * 1024 * 1024;
 
 export type TelegramApiResponse<T = unknown> = {
   ok: boolean;
@@ -12,6 +16,36 @@ export type SendTelegramResult = {
   error: string | null;
 };
 
+export type TelegramFileAttachment = {
+  file_id: string;
+  file_name?: string;
+  file_size?: number;
+  file_unique_id?: string;
+  mime_type?: string;
+};
+
+export type DownloadedTelegramFile = {
+  bytes: ArrayBuffer;
+  filePath: string;
+};
+
+export type TelegramFileDownloadErrorCode =
+  | "download-failed"
+  | "file-too-large"
+  | "invalid-file"
+  | "timeout";
+
+export class TelegramFileDownloadError extends Error {
+  constructor(
+    public readonly code: TelegramFileDownloadErrorCode,
+    message: string,
+    options?: ErrorOptions
+  ) {
+    super(message, options);
+    this.name = "TelegramFileDownloadError";
+  }
+}
+
 export type TelegramDiagnostics = {
   botUsername: string | null;
   lastErrorDate: string | null;
@@ -23,6 +57,174 @@ export type TelegramDiagnostics = {
 
 export function isTelegramConfigured(settings: TelegramSettings): boolean {
   return Boolean(settings.enabled && settings.botToken);
+}
+
+async function readResponseBytes(response: Response, maxBytes: number, timeoutMs: number) {
+  if (!response.body) {
+    throw new TelegramFileDownloadError("invalid-file", "O Telegram retornou um arquivo vazio.");
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  let timedOut = false;
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    void reader.cancel();
+  }, timeoutMs);
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        await reader.cancel();
+        throw new TelegramFileDownloadError(
+          "file-too-large",
+          "O arquivo excede o limite de download de 20 MB do Telegram."
+        );
+      }
+
+      chunks.push(value);
+    }
+  } catch (error) {
+    if (timedOut) {
+      throw new RequestTimeoutError(timeoutMs);
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  if (timedOut) {
+    throw new RequestTimeoutError(timeoutMs);
+  }
+
+  if (!totalBytes) {
+    throw new TelegramFileDownloadError("invalid-file", "O arquivo recebido esta vazio ou corrompido.");
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return bytes.buffer;
+}
+
+export async function downloadTelegramFile(
+  settings: TelegramSettings,
+  attachment: TelegramFileAttachment
+): Promise<DownloadedTelegramFile> {
+  if (!isTelegramConfigured(settings)) {
+    throw new TelegramFileDownloadError(
+      "download-failed",
+      "A integracao com o Telegram esta desativada ou incompleta."
+    );
+  }
+
+  if (!attachment.file_id) {
+    throw new TelegramFileDownloadError("invalid-file", "O audio nao possui um identificador valido.");
+  }
+
+  if (attachment.file_size && attachment.file_size > TELEGRAM_MAX_DOWNLOAD_SIZE) {
+    throw new TelegramFileDownloadError(
+      "file-too-large",
+      "O arquivo excede o limite de download de 20 MB do Telegram."
+    );
+  }
+
+  try {
+    const fileInfoResponse = await fetchWithTimeout(
+      `https://api.telegram.org/bot${settings.botToken}/getFile?file_id=${encodeURIComponent(attachment.file_id)}`,
+      { method: "GET", cache: "no-store" },
+      TELEGRAM_REQUEST_TIMEOUT_MS
+    );
+    const fileInfo = (await fileInfoResponse.json().catch(() => null)) as
+      | TelegramApiResponse<{ file_path?: string; file_size?: number }>
+      | null;
+    const filePath = fileInfo?.result?.file_path;
+
+    if (!fileInfoResponse.ok || !fileInfo?.ok || !filePath) {
+      throw new TelegramFileDownloadError(
+        "download-failed",
+        fileInfo?.description ?? "O Telegram nao retornou o caminho do arquivo."
+      );
+    }
+
+    if (fileInfo.result?.file_size && fileInfo.result.file_size > TELEGRAM_MAX_DOWNLOAD_SIZE) {
+      throw new TelegramFileDownloadError(
+        "file-too-large",
+        "O arquivo excede o limite de download de 20 MB do Telegram."
+      );
+    }
+
+    const fileResponse = await fetchWithTimeout(
+      `https://api.telegram.org/file/bot${settings.botToken}/${filePath}`,
+      { method: "GET", cache: "no-store" },
+      TELEGRAM_REQUEST_TIMEOUT_MS
+    );
+
+    if (!fileResponse.ok) {
+      throw new TelegramFileDownloadError(
+        "download-failed",
+        `O download do Telegram respondeu com HTTP ${fileResponse.status}.`
+      );
+    }
+
+    return {
+      bytes: await readResponseBytes(
+        fileResponse,
+        TELEGRAM_MAX_DOWNLOAD_SIZE,
+        TELEGRAM_REQUEST_TIMEOUT_MS
+      ),
+      filePath
+    };
+  } catch (error) {
+    if (error instanceof TelegramFileDownloadError) {
+      throw error;
+    }
+
+    if (error instanceof RequestTimeoutError) {
+      throw new TelegramFileDownloadError("timeout", "O download do audio excedeu o tempo limite.", {
+        cause: error
+      });
+    }
+
+    throw new TelegramFileDownloadError("download-failed", "Falha ao baixar o audio do Telegram.", {
+      cause: error
+    });
+  }
+}
+
+export async function sendTelegramChatAction(
+  settings: TelegramSettings,
+  chatId: string,
+  action: "typing"
+): Promise<boolean> {
+  if (!isTelegramConfigured(settings) || !chatId) return false;
+
+  try {
+    const response = await fetchWithTimeout(
+      `https://api.telegram.org/bot${settings.botToken}/sendChatAction`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, action })
+      },
+      TELEGRAM_REQUEST_TIMEOUT_MS
+    );
+    const payload = (await response.json().catch(() => null)) as TelegramApiResponse | null;
+    return Boolean(response.ok && payload?.ok);
+  } catch {
+    return false;
+  }
 }
 
 /**

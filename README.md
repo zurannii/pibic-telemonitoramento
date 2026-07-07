@@ -105,6 +105,8 @@ Troque ou remova essas credenciais antes de utilizar o sistema com dados reais.
 | `TELEGRAM_BOT_TOKEN` | Para Telegram | Token entregue pelo `@BotFather`. |
 | `TELEGRAM_BOT_USERNAME` | Para links Telegram | Username do bot, sem necessidade do `@`. |
 | `TELEGRAM_WEBHOOK_SECRET` | Recomendado | Valida as requisicoes recebidas do Telegram. |
+| `GROQ_API_KEY` | Para transcricao | Chave usada exclusivamente no servidor para transcrever audios. |
+| `GROQ_TRANSCRIPTION_TIMEOUT_MS` | Nao | Timeout da transcricao em milissegundos (padrao: `60000`). |
 | `DATABASE_URL` | Sim em producao | Transaction Pooler do Supabase usado pela aplicacao. |
 | `DIRECT_URL` | Para migrations locais | Conexao direta ou Session Pooler usada pelo Prisma CLI. |
 
@@ -188,6 +190,12 @@ https://t.me/SEU_BOT?start=TOKEN_DE_VINCULO
 Quando o paciente inicia o bot por esse link, o webhook associa o `chatId` do Telegram ao cadastro.
 
 O token de vinculo atual nao expira nem e invalidado depois do uso. Ele deve ser tratado como informacao sensivel ate que o fluxo seja convertido para token de uso unico.
+
+### 5. Transcricao de audio
+
+Defina `GROQ_API_KEY` no ambiente do servidor para aceitar mensagens de voz e arquivos de audio. O webhook baixa o arquivo pela Bot API, mantem o indicador de digitacao ativo durante o processamento e envia o conteudo para o modelo `whisper-large-v3`. O texto resultante percorre o mesmo fluxo de persistencia, associacao de respostas e geracao de alertas usado por mensagens de texto.
+
+Os formatos aceitos pela Groq (`flac`, `mp3`, `mp4`, `mpeg`, `mpga`, `m4a`, `ogg`, `wav` e `webm`) sao enviados sem conversao. Isso inclui o OGG usado nas mensagens de voz do Telegram. Arquivos sao processados em memoria, sem temporarios em disco, e respeitam o limite de download de 20 MB da Bot API.
 
 ## WhatsApp Cloud API
 
