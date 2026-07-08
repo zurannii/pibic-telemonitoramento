@@ -6,6 +6,65 @@ import type { BootstrapPayload, PatientDetails, PublicUser } from "@/lib/shared/
 import type { ToastItem } from "../components/ToastStack";
 import type { PatientProfileTab, QuestionView, ScreenId } from "../types";
 
+const LIVE_REFRESH_INTERVAL_MS = 5_000;
+const NAVIGATION_STORAGE_KEY = "telemonitor_navigation";
+
+const SCREEN_IDS: ScreenId[] = [
+  "overview",
+  "patients",
+  "patient-create",
+  "patient-profile",
+  "alerts",
+  "questions",
+  "reports",
+  "team"
+];
+
+const PATIENT_PROFILE_TABS: PatientProfileTab[] = [
+  "summary",
+  "responses",
+  "graphs",
+  "plan",
+  "team",
+  "reports",
+  "conduct"
+];
+
+type StoredNavigation = {
+  patientId: string | null;
+  patientProfileTab: PatientProfileTab;
+  screen: ScreenId;
+};
+
+function readStoredNavigation(): StoredNavigation | null {
+  try {
+    const stored = window.localStorage.getItem(NAVIGATION_STORAGE_KEY);
+    if (!stored) return null;
+
+    const parsed = JSON.parse(stored) as Partial<StoredNavigation>;
+    if (!parsed.screen || !SCREEN_IDS.includes(parsed.screen)) return null;
+
+    return {
+      screen: parsed.screen,
+      patientId: typeof parsed.patientId === "string" ? parsed.patientId : null,
+      patientProfileTab:
+        parsed.patientProfileTab && PATIENT_PROFILE_TABS.includes(parsed.patientProfileTab)
+          ? parsed.patientProfileTab
+          : "summary"
+    };
+  } catch {
+    return null;
+  }
+}
+
+function storeNavigation(navigation: StoredNavigation) {
+  try {
+    window.localStorage.setItem(NAVIGATION_STORAGE_KEY, JSON.stringify(navigation));
+  } catch {
+    // A navegacao continua funcional mesmo se o navegador bloquear armazenamento local.
+  }
+}
+
 type ConfirmState = {
   actionLabel?: string;
   description: string;
@@ -100,6 +159,7 @@ export function useHomeController() {
         setPatientDetails(null);
         setSelectedPatientId(null);
         setActiveScreen("patients");
+        storeNavigation({ screen: "patients", patientId: null, patientProfileTab: "summary" });
       }
     }
   };
@@ -109,12 +169,27 @@ export function useHomeController() {
     setLoadingSession(true);
 
     try {
+      const storedNavigation = readStoredNavigation();
       const session = await apiRequest<{ user: PublicUser | null }>("/api/auth/session", {
         cache: "no-store"
       });
 
       if (session.user) {
-        await loadBootstrap();
+        const nextBootstrap = await loadBootstrap();
+        if (
+          storedNavigation?.screen === "patient-profile" &&
+          storedNavigation.patientId &&
+          nextBootstrap.patients.some((patient) => patient.id === storedNavigation.patientId)
+        ) {
+          await loadPatientDetails(storedNavigation.patientId);
+          setActivePatientProfileTab(storedNavigation.patientProfileTab);
+          setActiveScreen("patient-profile");
+        } else if (storedNavigation) {
+          const restoredScreen =
+            storedNavigation.screen === "patient-profile" ? "patients" : storedNavigation.screen;
+          setActiveScreen(restoredScreen);
+          setActivePatientProfileTab(storedNavigation.patientProfileTab);
+        }
       }
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Nao foi possivel carregar a plataforma.");
@@ -127,6 +202,56 @@ export function useHomeController() {
     void loadInitialState();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!bootstrap || working) return;
+
+    let refreshInProgress = false;
+
+    const refreshLiveData = async () => {
+      if (refreshInProgress || document.visibilityState !== "visible") return;
+
+      refreshInProgress = true;
+      try {
+        const nextBootstrap = await apiRequest<BootstrapPayload>("/api/bootstrap", {
+          cache: "no-store"
+        });
+        setBootstrap(nextBootstrap);
+
+        if (selectedPatientId) {
+          const stillExists = nextBootstrap.patients.some(
+            (patient) => patient.id === selectedPatientId
+          );
+          if (stillExists) {
+            const details = await apiRequest<PatientDetails>(
+              `/api/patients/${selectedPatientId}`,
+              { cache: "no-store" }
+            );
+            setPatientDetails(details);
+          } else {
+            setPatientDetails(null);
+            setSelectedPatientId(null);
+            setActiveScreen("patients");
+            storeNavigation({ screen: "patients", patientId: null, patientProfileTab: "summary" });
+          }
+        }
+      } catch {
+        // Mantem os ultimos dados validos; a proxima rodada tenta novamente.
+      } finally {
+        refreshInProgress = false;
+      }
+    };
+
+    const interval = window.setInterval(() => {
+      void refreshLiveData();
+    }, LIVE_REFRESH_INTERVAL_MS);
+    window.addEventListener("focus", refreshLiveData);
+
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshLiveData);
+    };
+  }, [bootstrap?.currentUser.id, selectedPatientId, working]);
 
   const withFeedback = async <T>(action: () => Promise<T>, successMessage?: string) => {
     setWorking(true);
@@ -179,12 +304,23 @@ export function useHomeController() {
       setPatientDetails(null);
       setSelectedPatientId(null);
       setActiveScreen("overview");
+      window.localStorage.removeItem(NAVIGATION_STORAGE_KEY);
     }, "Sessao encerrada.");
   };
 
   const selectScreen = (screen: ScreenId) => {
     setActiveScreen(screen);
+    storeNavigation({
+      screen,
+      patientId: screen === "patient-profile" ? selectedPatientId : null,
+      patientProfileTab: activePatientProfileTab
+    });
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const selectPatientProfileTab = (tab: PatientProfileTab) => {
+    setActivePatientProfileTab(tab);
+    storeNavigation({ screen: "patient-profile", patientId: selectedPatientId, patientProfileTab: tab });
   };
 
   const openPatientProfile = async (patientId: string) => {
@@ -192,6 +328,7 @@ export function useHomeController() {
       await loadPatientDetails(patientId);
       setActivePatientProfileTab("summary");
       setActiveScreen("patient-profile");
+      storeNavigation({ screen: "patient-profile", patientId, patientProfileTab: "summary" });
       window.scrollTo({ top: 0, behavior: "smooth" });
     }, "Perfil do paciente carregado.");
   };
@@ -209,12 +346,19 @@ export function useHomeController() {
     notes: string;
   }) => {
     await withFeedback(async () => {
-      await apiRequest("/api/patients", {
+      const result = await apiRequest<{ patient: { id: string } }>("/api/patients", {
         method: "POST",
         body: JSON.stringify(payload)
       });
-      await refreshData();
-      setActiveScreen("patients");
+      await loadBootstrap();
+      await loadPatientDetails(result.patient.id);
+      setActivePatientProfileTab("summary");
+      setActiveScreen("patient-profile");
+      storeNavigation({
+        screen: "patient-profile",
+        patientId: result.patient.id,
+        patientProfileTab: "summary"
+      });
     }, "Paciente criado com sucesso.");
   };
 
@@ -406,14 +550,17 @@ export function useHomeController() {
     });
   };
 
-  const handleSendTest = async (patientId: string, questionId: string, channel?: "whatsapp" | "telegram") => {
+  const handleSendMessage = async (
+    patientId: string,
+    payload: { questionId?: string; text?: string; channel?: "whatsapp" | "telegram" }
+  ) => {
     await withFeedback(async () => {
-      await apiRequest(`/api/patients/${patientId}/send-test`, {
+      await apiRequest(`/api/patients/${patientId}/messages`, {
         method: "POST",
-        body: JSON.stringify({ questionId, channel })
+        body: JSON.stringify(payload)
       });
       await refreshData();
-    }, "Mensagem de teste enviada.");
+    }, "Mensagem enviada ao paciente.");
   };
 
   return {
@@ -437,7 +584,7 @@ export function useHomeController() {
     handleRegister,
     handleSaveTelegram,
     handleSaveWhatsApp,
-    handleSendTest,
+    handleSendMessage,
     loadError,
     loadingSession,
     openPatientProfile,
@@ -446,7 +593,7 @@ export function useHomeController() {
     refreshData,
     retryInitialLoad: loadInitialState,
     selectScreen,
-    setActivePatientProfileTab,
+    setActivePatientProfileTab: selectPatientProfileTab,
     setQuestionView,
     toasts,
     working

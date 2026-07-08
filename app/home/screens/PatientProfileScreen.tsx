@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "../../page.module.css";
 import type { PatientDetails, PublicUser, QuestionRecord } from "@/lib/shared/types";
 import type { PatientProfileTab } from "../types";
@@ -20,7 +20,10 @@ type PatientProfileScreenProps = {
   onBack: () => void;
   onDeleteSchedule: (patientId: string, scheduleId: string) => void;
   onResolveAlert: (alertId: string) => void;
-  onSendTest: (patientId: string, questionId: string, channel?: "whatsapp" | "telegram") => Promise<void>;
+  onSendMessage: (
+    patientId: string,
+    payload: { questionId?: string; text?: string; channel?: "whatsapp" | "telegram" }
+  ) => Promise<void>;
   onSelectTab: (tab: PatientProfileTab) => void;
   questions: QuestionRecord[];
   activeTab: PatientProfileTab;
@@ -61,7 +64,7 @@ export function PatientProfileScreen({
   onDeleteSchedule,
   onResolveAlert,
   onSelectTab,
-  onSendTest,
+  onSendMessage,
   questions,
   telegramInfo,
   users
@@ -74,6 +77,20 @@ export function PatientProfileScreen({
     daysOfWeek: [1, 2, 3, 4, 5] as number[]
   });
   const [busy, setBusy] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [messageForm, setMessageForm] = useState({
+    questionId: questions[0]?.id ?? "",
+    text: "",
+    channel: details.patient.preferredChannel
+  });
+
+  useEffect(() => {
+    setMessageForm({
+      questionId: questions[0]?.id ?? "",
+      text: "",
+      channel: details.patient.preferredChannel
+    });
+  }, [details.patient.id, details.patient.preferredChannel]);
 
   const responseCount = details.messages.filter((message) => message.direction === "inbound").length;
   const activeAlertCount = details.alerts.filter((alert) => alert.status === "active").length;
@@ -99,6 +116,20 @@ export function PatientProfileScreen({
       });
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    setSendingMessage(true);
+    try {
+      await onSendMessage(details.patient.id, {
+        questionId: messageForm.questionId || undefined,
+        text: messageForm.text || undefined,
+        channel: messageForm.channel
+      });
+      setMessageForm((current) => ({ ...current, text: "" }));
+    } finally {
+      setSendingMessage(false);
     }
   };
 
@@ -222,37 +253,102 @@ export function PatientProfileScreen({
           )}
 
           {activeTab === "responses" && (
-            <section className={styles.profileSectionCard}>
-              <h2>Historico de Respostas</h2>
-              <div className={styles.profileResponseCards}>
-                {details.messages.map((message) => (
-                  <article key={message.id} className={styles.profileResponseCard}>
-                    <div className={styles.profileResponseHeader}>
-                      <span className={styles.profileResponseHeaderIcon}>
-                        <Icon
-                          name={message.type === "audio" ? "microphone" : "questions"}
-                          className={styles.profileResponseRecordIcon}
-                        />
-                      </span>
-                      <div className={styles.profileResponseMeta}>
-                        <strong>
-                          {message.direction === "outbound" ? "Mensagem enviada" : "Resposta recebida"}
-                        </strong>
-                        <div className={styles.profileResponseHeaderBadges}>
-                          <span className={styles.profileResponseTypeBadge}>{message.type}</span>
-                          <span className={styles.profileResponseTypeBadge}>{message.status}</span>
-                          <span className={styles.profileResponseTypeBadge}>{message.channel}</span>
+            <>
+              <section className={styles.profileSectionCard}>
+                <h2>Enviar mensagem ao paciente</h2>
+                <p className={styles.infoText}>
+                  Envie uma pergunta cadastrada ou escreva uma mensagem personalizada.
+                </p>
+                <div className={styles.profileInfoGrid}>
+                  <label className={styles.field}>
+                    <span>Pergunta</span>
+                    <select
+                      onChange={(event) =>
+                        setMessageForm((current) => ({ ...current, questionId: event.target.value }))
+                      }
+                      value={messageForm.questionId}
+                    >
+                      <option value="">Somente texto personalizado</option>
+                      {questions.map((question) => (
+                        <option key={question.id} value={question.id}>
+                          {question.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span>Canal</span>
+                    <select
+                      onChange={(event) =>
+                        setMessageForm((current) => ({
+                          ...current,
+                          channel: event.target.value as "whatsapp" | "telegram"
+                        }))
+                      }
+                      value={messageForm.channel}
+                    >
+                      <option value="telegram">Telegram</option>
+                      <option value="whatsapp">WhatsApp</option>
+                    </select>
+                  </label>
+                </div>
+                <label className={styles.field}>
+                  <span>Mensagem personalizada (opcional)</span>
+                  <textarea
+                    onChange={(event) =>
+                      setMessageForm((current) => ({ ...current, text: event.target.value }))
+                    }
+                    placeholder="Se preenchida, esta mensagem substitui o texto da pergunta selecionada."
+                    rows={4}
+                    value={messageForm.text}
+                  />
+                </label>
+                <button
+                  className={styles.primaryButton}
+                  disabled={sendingMessage || (!messageForm.questionId && !messageForm.text.trim())}
+                  onClick={handleSendMessage}
+                  type="button"
+                >
+                  {sendingMessage ? "Enviando..." : "Enviar mensagem"}
+                </button>
+              </section>
+
+              <section className={styles.profileSectionCard}>
+                <h2>Historico de Respostas</h2>
+                <div className={styles.profileResponseCards}>
+                  {details.messages.map((message) => (
+                    <article key={message.id} className={styles.profileResponseCard}>
+                      <div className={styles.profileResponseHeader}>
+                        <span className={styles.profileResponseHeaderIcon}>
+                          <Icon
+                            name={message.type === "audio" ? "microphone" : "questions"}
+                            className={styles.profileResponseRecordIcon}
+                          />
+                        </span>
+                        <div className={styles.profileResponseMeta}>
+                          <strong>
+                            {message.direction === "outbound" ? "Mensagem enviada" : "Resposta recebida"}
+                          </strong>
+                          <div className={styles.profileResponseHeaderBadges}>
+                            <span className={styles.profileResponseTypeBadge}>{message.type}</span>
+                            <span className={styles.profileResponseTypeBadge}>{message.status}</span>
+                            <span className={styles.profileResponseTypeBadge}>{message.channel}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className={styles.profileResponseTextBlock}>
-                      <small>Conteudo</small>
-                      <p>{message.body}</p>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
+                      <div className={styles.profileResponseTextBlock}>
+                        <small>
+                          Conteudo • {new Date(
+                            message.receivedAt ?? message.sentAt ?? Date.now()
+                          ).toLocaleString("pt-BR")}
+                        </small>
+                        <p>{message.body}</p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            </>
           )}
 
           {activeTab === "plan" && (
@@ -281,17 +377,24 @@ export function PatientProfileScreen({
                         <div className={styles.profileActionButtons}>
                           <button
                             className={styles.tableButton}
-                            onClick={() => onSendTest(details.patient.id, schedule.questionId)}
+                            onClick={() =>
+                              onSendMessage(details.patient.id, { questionId: schedule.questionId })
+                            }
                             type="button"
                           >
-                            Enviar teste
+                            Enviar agora
                           </button>
                           <button
                             className={styles.tableButton}
-                            onClick={() => onSendTest(details.patient.id, schedule.questionId, "telegram")}
+                            onClick={() =>
+                              onSendMessage(details.patient.id, {
+                                questionId: schedule.questionId,
+                                channel: "telegram"
+                              })
+                            }
                             type="button"
                           >
-                            Teste Telegram
+                            Enviar no Telegram
                           </button>
                           <button
                             className={styles.tableButton}

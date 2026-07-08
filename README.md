@@ -197,6 +197,8 @@ Defina `GROQ_API_KEY` no ambiente do servidor para aceitar mensagens de voz e ar
 
 Os formatos aceitos pela Groq (`flac`, `mp3`, `mp4`, `mpeg`, `mpga`, `m4a`, `ogg`, `wav` e `webm`) sao enviados sem conversao. Isso inclui o OGG usado nas mensagens de voz do Telegram. Arquivos sao processados em memoria, sem temporarios em disco, e respeitam o limite de download de 20 MB da Bot API.
 
+Depois de uma transcricao bem-sucedida, o paciente recebe uma confirmacao de que o relato foi registrado e encaminhado para a equipe. O painel consulta novos dados automaticamente a cada cinco segundos e restaura a ultima tela e o perfil selecionado depois de recarregar a pagina.
+
 ## WhatsApp Cloud API
 
 Na tela **Equipe > Integracao com WhatsApp**, informe:
@@ -337,7 +339,7 @@ Para producao, crie uma rota protegida de processamento e acione-a com Vercel Cr
 | `/api/patients` | `GET`, `POST` | Listagem e cadastro de pacientes. |
 | `/api/patients/[patientId]` | `GET`, `PATCH`, `DELETE` | Detalhes, edicao e exclusao. |
 | `/api/patients/[patientId]/schedules` | `POST`, `PATCH`, `DELETE` | Rotinas do paciente. |
-| `/api/patients/[patientId]/send-test` | `POST` | Envio manual de teste. |
+| `/api/patients/[patientId]/messages` | `POST` | Envio de pergunta ou mensagem personalizada. |
 | `/api/questions` | `GET`, `POST` | Perguntas de monitoramento. |
 | `/api/questions/[questionId]` | `PATCH`, `DELETE` | Edicao e exclusao de pergunta. |
 | `/api/alerts/[alertId]` | `PATCH` | Atualizacao ou resolucao de alerta. |

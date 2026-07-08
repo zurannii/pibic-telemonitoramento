@@ -105,7 +105,7 @@ export default function Home() {
             onDeleteSchedule={controller.confirmDeleteSchedule}
             onResolveAlert={controller.confirmResolveAlert}
             onSelectTab={controller.setActivePatientProfileTab}
-            onSendTest={controller.handleSendTest}
+            onSendMessage={controller.handleSendMessage}
             questions={bootstrap.questions}
             telegramInfo={bootstrap.telegram}
             users={bootstrap.users}

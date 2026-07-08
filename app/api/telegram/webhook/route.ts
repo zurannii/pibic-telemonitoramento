@@ -18,6 +18,8 @@ export const runtime = "nodejs";
 
 const AUDIO_TRANSCRIPTION_ERROR_MESSAGE =
   "Não foi possível compreender o áudio. Por favor, tente novamente.";
+const AUDIO_TRANSCRIPTION_SUCCESS_MESSAGE =
+  "Recebemos seu áudio. Seu relato foi registrado e encaminhado para análise da equipe responsável.";
 
 type TelegramWebhookMessage = TelegramAudioMessage & {
   message_id?: number;
@@ -134,17 +136,25 @@ export async function POST(request: Request) {
 
   if (text.startsWith("/start")) {
     const result = await updateDb((currentDb) => {
-      let patient = matchPatientByTelegramChatId(currentDb, chatId);
+      const linkedPatient = matchPatientByTelegramChatId(currentDb, chatId);
+      const patient = startToken
+        ? matchPatientByTelegramLinkToken(currentDb, startToken)
+        : linkedPatient;
 
-      if (!patient && startToken) {
-        patient = matchPatientByTelegramLinkToken(currentDb, startToken);
-        if (patient) {
-          patient.telegramChatId = chatId;
-          patient.telegramUsername = username;
-          patient.telegramLinkedAt = nowIso();
-          patient.preferredChannel = "telegram";
-          patient.updatedAt = nowIso();
+      if (patient && startToken) {
+        if (linkedPatient && linkedPatient.id !== patient.id) {
+          linkedPatient.telegramChatId = null;
+          linkedPatient.telegramUsername = null;
+          linkedPatient.telegramLinkedAt = null;
+          linkedPatient.preferredChannel = "whatsapp";
+          linkedPatient.updatedAt = nowIso();
         }
+
+        patient.telegramChatId = chatId;
+        patient.telegramUsername = username;
+        patient.telegramLinkedAt = nowIso();
+        patient.preferredChannel = "telegram";
+        patient.updatedAt = nowIso();
       }
 
       if (!patient) {
@@ -218,9 +228,11 @@ export async function POST(request: Request) {
     }
   }
 
-  await updateDb((currentDb) => {
+  const messageRegistered = await updateDb((currentDb) => {
     const currentPatient = currentDb.patients.find((item) => item.id === patient.id);
-    if (!currentPatient) return;
+    if (!currentPatient) return false;
+
+    const messageCount = currentDb.messages.length;
 
     registerInboundMessage(currentDb, currentPatient, {
       body: messageBody,
@@ -229,7 +241,23 @@ export async function POST(request: Request) {
       providerMessageId,
       type: isAudio ? "audio" : "text"
     });
+
+    return currentDb.messages.length > messageCount;
   });
+
+  if (isAudio && messageRegistered) {
+    const confirmation = await sendTelegramTextMessage(
+      telegramSettings,
+      chatId,
+      AUDIO_TRANSCRIPTION_SUCCESS_MESSAGE
+    );
+    if (!confirmation.ok) {
+      console.error("Falha ao confirmar o recebimento do audio no Telegram.", {
+        error: confirmation.error,
+        providerMessageId
+      });
+    }
+  }
 
   return ok({ received: true });
 }

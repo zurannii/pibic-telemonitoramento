@@ -1,6 +1,10 @@
 import { fail, ok, readString, requireUser } from "@/lib/server/api";
 import { updateDb } from "@/lib/server/db";
-import { buildChannelMessageFields, createDeliveryAlert, sendTextToPatientChannel } from "@/lib/server/messaging";
+import {
+  buildChannelMessageFields,
+  createDeliveryAlert,
+  sendTextToPatientChannel
+} from "@/lib/server/messaging";
 import { createId, nowIso } from "@/lib/server/utils";
 
 export const runtime = "nodejs";
@@ -29,14 +33,21 @@ export async function POST(request: Request, context: RouteContext) {
       return { kind: "missing-patient" as const };
     }
 
-    const question = questionId ? db.questions.find((item) => item.id === questionId) ?? null : null;
+    const question = questionId
+      ? db.questions.find((item) => item.id === questionId) ?? null
+      : null;
     const messageBody = customText || question?.simpleText || question?.text;
 
     if (!messageBody) {
       return { kind: "missing-message" as const };
     }
 
-    const sendResult = await sendTextToPatientChannel(db, patient, messageBody, preferredChannel);
+    const sendResult = await sendTextToPatientChannel(
+      db,
+      patient,
+      messageBody,
+      preferredChannel
+    );
     const message = {
       id: createId("message"),
       patientId: patient.id,
@@ -60,7 +71,7 @@ export async function POST(request: Request, context: RouteContext) {
         createDeliveryAlert(
           patient.id,
           sendResult.channel,
-          sendResult.error ?? "Nao foi possivel enviar a mensagem de teste.",
+          sendResult.error ?? "Nao foi possivel enviar a mensagem ao paciente.",
           user.id,
           message.id
         )
@@ -79,7 +90,7 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   if (result.kind === "missing-message") {
-    return fail(400, "Escolha uma pergunta ou digite um texto para o teste.");
+    return fail(400, "Escolha uma pergunta ou digite uma mensagem.");
   }
 
   return ok(result);
