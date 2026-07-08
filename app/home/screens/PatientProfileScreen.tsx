@@ -5,6 +5,7 @@ import styles from "../../page.module.css";
 import type {
   PatientDetails,
   PatientReport,
+  OutboundMessageFormat,
   PublicUser,
   QuestionRecord
 } from "@/lib/shared/types";
@@ -29,7 +30,12 @@ type PatientProfileScreenProps = {
   onGenerateReport: (patientId: string) => Promise<PatientReport | undefined>;
   onSendMessage: (
     patientId: string,
-    payload: { questionId?: string; text?: string; channel?: "whatsapp" | "telegram" }
+    payload: {
+      questionId?: string;
+      text?: string;
+      channel?: "whatsapp" | "telegram";
+      messageType?: OutboundMessageFormat;
+    }
   ) => Promise<void>;
   onSelectTab: (tab: PatientProfileTab) => void;
   questions: QuestionRecord[];
@@ -86,17 +92,24 @@ export function PatientProfileScreen({
   });
   const [busy, setBusy] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
-  const [messageForm, setMessageForm] = useState({
+  const [messageForm, setMessageForm] = useState<{
+    questionId: string;
+    text: string;
+    channel: "whatsapp" | "telegram";
+    messageType: OutboundMessageFormat;
+  }>({
     questionId: questions[0]?.id ?? "",
     text: "",
-    channel: details.patient.preferredChannel
+    channel: details.patient.preferredChannel,
+    messageType: "automatic"
   });
 
   useEffect(() => {
     setMessageForm({
       questionId: questions[0]?.id ?? "",
       text: "",
-      channel: details.patient.preferredChannel
+      channel: details.patient.preferredChannel,
+      messageType: "automatic"
     });
   }, [details.patient.id, details.patient.preferredChannel]);
 
@@ -133,7 +146,8 @@ export function PatientProfileScreen({
       await onSendMessage(details.patient.id, {
         questionId: messageForm.questionId || undefined,
         text: messageForm.text || undefined,
-        channel: messageForm.channel
+        channel: messageForm.channel,
+        messageType: messageForm.messageType
       });
       setMessageForm((current) => ({ ...current, text: "" }));
     } finally {
@@ -302,6 +316,26 @@ export function PatientProfileScreen({
                     >
                       <option value="telegram">Telegram</option>
                       <option value="whatsapp">WhatsApp</option>
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span>Formato do envio</span>
+                    <select
+                      onChange={(event) =>
+                        setMessageForm((current) => ({
+                          ...current,
+                          messageType: event.target.value as OutboundMessageFormat
+                        }))
+                      }
+                      value={messageForm.messageType}
+                    >
+                      <option value="automatic">
+                        {details.patient.requiresAudioMessages
+                          ? "Automatico (audio assistido)"
+                          : "Automatico (preferencia do paciente)"}
+                      </option>
+                      <option value="text">Mensagem de texto</option>
+                      <option value="audio">Mensagem de audio</option>
                     </select>
                   </label>
                 </div>

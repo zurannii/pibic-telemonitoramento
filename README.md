@@ -208,6 +208,8 @@ Depois de uma transcricao bem-sucedida, o paciente recebe uma confirmacao de que
 
 Ao cadastrar um paciente, selecione **Nao alfabetizado — enviar mensagens em audio** em **Acessibilidade de leitura**. Todas as mensagens enviadas pelo fluxo central — perguntas manuais, rotinas e confirmacoes do Telegram — passam a ser sintetizadas antes do envio. O Telegram recebe uma mensagem de voz e o WhatsApp recebe um arquivo de audio pela Cloud API; o texto original continua registrado no historico para a equipe.
 
+Na aba **Respostas**, o campo **Formato do envio** permite manter o comportamento automatico do paciente ou escolher explicitamente **Mensagem de texto** e **Mensagem de audio**. Falhas dos provedores sao apresentadas na tela e continuam registradas no historico e nos alertas de entrega.
+
 Configure `OPENAI_API_KEY` somente no servidor. Por padrao, o projeto usa o modelo `tts-1-hd`, a voz `nova`, MP3 e uma velocidade levemente reduzida para favorecer clareza. Modelo e voz podem ser ajustados pelas variaveis `OPENAI_TTS_MODEL` e `OPENAI_TTS_VOICE` sem alterar o codigo. Se a geracao ou o envio falhar, o sistema nao substitui silenciosamente o audio por texto: ele registra a falha e cria o alerta de entrega existente.
 
 A tela **Relatorios** permite selecionar um paciente, consolidar todas as respostas clinicamente relevantes, visualizar intensidade e evolucao da dor, temas recorrentes, alertas e uma linha do tempo completa. O relatorio pode ser exportado diretamente em PDF e sempre inclui o aviso de revisao por profissional de saude.

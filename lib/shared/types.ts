@@ -7,6 +7,7 @@ export type ResponseFormat = "text" | "buttons" | "audio";
 export type QuestionResponseType = "yes-no" | "scale" | "multiple-choice" | "text" | "audio";
 export type MessageDirection = "outbound" | "inbound";
 export type MessagingChannel = "whatsapp" | "telegram";
+export type OutboundMessageFormat = "automatic" | "text" | "audio";
 export type MessageStatus =
   | "scheduled"
   | "sent"

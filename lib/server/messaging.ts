@@ -3,6 +3,7 @@ import type {
   DatabaseShape,
   MessageLogRecord,
   MessagingChannel,
+  OutboundMessageFormat,
   PatientRecord
 } from "../shared/types";
 import { updatePatientStatusFromAlerts } from "./db";
@@ -62,10 +63,12 @@ export async function sendMessageToPatientChannel(
   db: DatabaseShape,
   patient: PatientRecord,
   body: string,
-  preferredChannel?: string | null
+  preferredChannel?: string | null,
+  preferredMessageType?: Exclude<OutboundMessageFormat, "automatic"> | null
 ): Promise<SendChannelResult> {
   const channel = resolvePatientChannel(patient, preferredChannel);
-  const messageType = patient.requiresAudioMessages ? "audio" : "text";
+  const messageType =
+    preferredMessageType ?? (patient.requiresAudioMessages ? "audio" : "text");
   const telegramSettings = resolveTelegramSettings(db.telegram);
 
   if (channel === "telegram" && !patient.telegramChatId) {
@@ -109,7 +112,7 @@ export async function sendMessageToPatientChannel(
     };
   }
 
-  if (patient.requiresAudioMessages) {
+  if (messageType === "audio") {
     try {
       const audio = await synthesizeSpeech(body);
       const result =

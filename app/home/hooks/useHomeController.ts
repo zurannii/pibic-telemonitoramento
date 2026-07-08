@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import type {
   BootstrapPayload,
+  OutboundMessageFormat,
   PatientDetails,
   PatientReport,
   PublicUser
@@ -558,7 +559,12 @@ export function useHomeController() {
 
   const handleSendMessage = async (
     patientId: string,
-    payload: { questionId?: string; text?: string; channel?: "whatsapp" | "telegram" }
+    payload: {
+      questionId?: string;
+      text?: string;
+      channel?: "whatsapp" | "telegram";
+      messageType?: OutboundMessageFormat;
+    }
   ) => {
     await withFeedback(async () => {
       await apiRequest(`/api/patients/${patientId}/messages`, {

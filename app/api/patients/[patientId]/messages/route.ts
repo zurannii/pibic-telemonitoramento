@@ -1,5 +1,5 @@
 import { fail, ok, readString, requireUser } from "@/lib/server/api";
-import { updateDb } from "@/lib/server/db";
+import { readDb, updateDb } from "@/lib/server/db";
 import {
   buildChannelMessageFields,
   createDeliveryAlert,
@@ -26,32 +26,53 @@ export async function POST(request: Request, context: RouteContext) {
   const questionId = readString(body?.questionId);
   const customText = readString(body?.text);
   const preferredChannel = readString(body?.channel) || null;
+  const requestedMessageType = readString(body?.messageType) || "automatic";
 
-  const result = await updateDb(async (db) => {
-    const patient = db.patients.find((item) => item.id === patientId);
-    if (!patient) {
-      return { kind: "missing-patient" as const };
-    }
+  if (!new Set(["automatic", "text", "audio"]).has(requestedMessageType)) {
+    return fail(400, "Escolha um formato de mensagem valido.");
+  }
 
-    const question = questionId
-      ? db.questions.find((item) => item.id === questionId) ?? null
+  const preferredMessageType =
+    requestedMessageType === "text" || requestedMessageType === "audio"
+      ? requestedMessageType
       : null;
-    const messageBody = customText || question?.simpleText || question?.text;
 
-    if (!messageBody) {
-      return { kind: "missing-message" as const };
-    }
+  const snapshot = await readDb();
+  const patient = snapshot.patients.find((item) => item.id === patientId);
+  if (!patient) {
+    return fail(404, "Paciente nao encontrado.");
+  }
 
-    const sendResult = await sendMessageToPatientChannel(
-      db,
-      patient,
-      messageBody,
-      preferredChannel
-    );
+  const question = questionId
+    ? snapshot.questions.find((item) => item.id === questionId) ?? null
+    : null;
+  const messageBody = customText || question?.simpleText || question?.text;
+
+  if (!messageBody) {
+    return fail(400, "Escolha uma pergunta ou digite uma mensagem.");
+  }
+
+  // A chamada aos provedores fica fora da transacao do PostgreSQL. TTS pode
+  // demorar dezenas de segundos e nao deve manter o banco bloqueado.
+  const sendResult = await sendMessageToPatientChannel(
+    snapshot,
+    patient,
+    messageBody,
+    preferredChannel,
+    preferredMessageType
+  );
+
+  const message = await updateDb((db) => {
+    const currentPatient = db.patients.find((item) => item.id === patientId);
+    if (!currentPatient) return null;
+
+    const persistedQuestionId = question?.id && db.questions.some((item) => item.id === question.id)
+      ? question.id
+      : null;
     const message = {
       id: createId("message"),
-      patientId: patient.id,
-      questionId: question?.id ?? null,
+      patientId: currentPatient.id,
+      questionId: persistedQuestionId,
       scheduleId: null,
       direction: "outbound" as const,
       type: sendResult.messageType,
@@ -78,20 +99,19 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    return {
-      kind: "done" as const,
-      sendResult,
-      message
-    };
+    return message;
   });
 
-  if (result.kind === "missing-patient") {
-    return fail(404, "Paciente nao encontrado.");
+  if (!message) {
+    return fail(409, "O paciente foi removido durante o envio da mensagem.");
   }
 
-  if (result.kind === "missing-message") {
-    return fail(400, "Escolha uma pergunta ou digite uma mensagem.");
+  if (!sendResult.ok) {
+    return fail(
+      502,
+      sendResult.error ?? "Nao foi possivel enviar a mensagem ao paciente."
+    );
   }
 
-  return ok(result);
+  return ok({ sendResult, message });
 }

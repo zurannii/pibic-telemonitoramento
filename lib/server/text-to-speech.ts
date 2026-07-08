@@ -40,6 +40,18 @@ function readPositiveInteger(value: string | undefined, fallback: number) {
 
 async function readOpenAiError(response: Response) {
   const payload = (await response.json().catch(() => null)) as OpenAiErrorResponse | null;
+  if (response.status === 401) {
+    return "A chave OPENAI_API_KEY e invalida ou nao pertence ao projeto ativo.";
+  }
+  if (response.status === 403) {
+    return "A chave da OpenAI nao possui permissao para gerar audio.";
+  }
+  if (response.status === 429) {
+    return "A conta da OpenAI esta sem saldo ou atingiu o limite de uso da API.";
+  }
+  if (response.status === 404) {
+    return "O modelo de voz configurado nao esta disponivel para esta conta.";
+  }
   if (typeof payload?.error === "string") return payload.error;
   return payload?.error?.message || `A OpenAI respondeu com HTTP ${response.status}.`;
 }
