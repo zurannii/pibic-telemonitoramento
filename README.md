@@ -108,10 +108,10 @@ Troque ou remova essas credenciais antes de utilizar o sistema com dados reais.
 | `TELEGRAM_WEBHOOK_SECRET` | Recomendado | Valida as requisicoes recebidas do Telegram. |
 | `GROQ_API_KEY` | Para transcricao | Chave usada exclusivamente no servidor para transcrever audios. |
 | `GROQ_TRANSCRIPTION_TIMEOUT_MS` | Nao | Timeout da transcricao em milissegundos (padrao: `60000`). |
-| `OPENAI_API_KEY` | Para mensagens em audio | Chave usada exclusivamente no servidor para gerar a voz das mensagens. |
-| `OPENAI_TTS_MODEL` | Nao | Modelo de voz (padrao: `tts-1-hd`). |
-| `OPENAI_TTS_VOICE` | Nao | Voz usada na leitura das mensagens (padrao: `nova`). |
-| `OPENAI_TTS_TIMEOUT_MS` | Nao | Timeout da geracao de voz em milissegundos (padrao: `60000`). |
+| `ELEVENLABS_API_KEY` | Para mensagens em audio | Chave usada exclusivamente no servidor para gerar a voz das mensagens. |
+| `ELEVENLABS_TTS_MODEL` | Nao | Modelo de voz (padrao: `eleven_flash_v2_5`). |
+| `ELEVENLABS_VOICE_ID` | Nao | Identificador da voz do ElevenLabs. |
+| `ELEVENLABS_TTS_TIMEOUT_MS` | Nao | Timeout da geracao de voz em milissegundos (padrao: `60000`). |
 | `DATABASE_URL` | Sim em producao | Transaction Pooler do Supabase usado pela aplicacao. |
 | `DIRECT_URL` | Para migrations locais | Conexao direta ou Session Pooler usada pelo Prisma CLI. |
 
@@ -210,7 +210,9 @@ Ao cadastrar um paciente, selecione **Nao alfabetizado — enviar mensagens em a
 
 Na aba **Respostas**, o campo **Formato do envio** permite manter o comportamento automatico do paciente ou escolher explicitamente **Mensagem de texto** e **Mensagem de audio**. Falhas dos provedores sao apresentadas na tela e continuam registradas no historico e nos alertas de entrega.
 
-Configure `OPENAI_API_KEY` somente no servidor. Por padrao, o projeto usa o modelo `tts-1-hd`, a voz `nova`, MP3 e uma velocidade levemente reduzida para favorecer clareza. Modelo e voz podem ser ajustados pelas variaveis `OPENAI_TTS_MODEL` e `OPENAI_TTS_VOICE` sem alterar o codigo. Se a geracao ou o envio falhar, o sistema nao substitui silenciosamente o audio por texto: ele registra a falha e cria o alerta de entrega existente.
+Configure `ELEVENLABS_API_KEY` somente no servidor. Por padrao, o projeto usa o modelo multilingue `eleven_flash_v2_5`, idioma portugues e saida MP3. Modelo e voz podem ser ajustados pelas variaveis `ELEVENLABS_TTS_MODEL` e `ELEVENLABS_VOICE_ID` sem alterar o codigo. Se a geracao ou o envio falhar, o sistema nao substitui silenciosamente o audio por texto: ele registra a falha e cria o alerta de entrega existente.
+
+O plano gratuito do ElevenLabs deve ser usado somente com dados ficticios de demonstracao. Ele possui limite mensal, nao inclui licenca comercial e nao oferece as mesmas garantias de retencao de dados dos planos empresariais.
 
 A tela **Relatorios** permite selecionar um paciente, consolidar todas as respostas clinicamente relevantes, visualizar intensidade e evolucao da dor, temas recorrentes, alertas e uma linha do tempo completa. O relatorio pode ser exportado diretamente em PDF e sempre inclui o aviso de revisao por profissional de saude.
 
@@ -267,7 +269,7 @@ vercel env add TELEGRAM_BOT_TOKEN production
 vercel env add TELEGRAM_BOT_USERNAME production
 vercel env add TELEGRAM_WEBHOOK_SECRET production
 vercel env add GROQ_API_KEY production
-vercel env add OPENAI_API_KEY production
+vercel env add ELEVENLABS_API_KEY production
 vercel env add DATABASE_URL production
 ```
 
@@ -410,7 +412,7 @@ Confirme tambem:
 - Verify Token e App Secret do WhatsApp configurados;
 - credenciais de demonstracao removidas;
 - `DATABASE_URL` apontando para o banco PostgreSQL de producao;
-- `GROQ_API_KEY` para compreender audios recebidos e `OPENAI_API_KEY` para responder em voz;
+- `GROQ_API_KEY` para compreender audios recebidos e `ELEVENLABS_API_KEY` para responder em voz;
 - politica de backup, controle de acesso, auditoria e adequacao a LGPD.
 
 ## Problemas comuns

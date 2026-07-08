@@ -1,8 +1,8 @@
 import { RequestTimeoutError, fetchWithTimeout } from "./http";
 
-const OPENAI_SPEECH_URL = "https://api.openai.com/v1/audio/speech";
-const DEFAULT_TTS_MODEL = "tts-1-hd";
-const DEFAULT_TTS_VOICE = "nova";
+const ELEVENLABS_SPEECH_URL = "https://api.elevenlabs.io/v1/text-to-speech";
+const DEFAULT_TTS_MODEL = "eleven_flash_v2_5";
+const DEFAULT_TTS_VOICE_ID = "JBFqnCBsd6RMkjVDRZzb";
 const DEFAULT_TTS_TIMEOUT_MS = 60_000;
 const MAX_TTS_INPUT_LENGTH = 4_096;
 
@@ -29,8 +29,13 @@ export type SynthesizedSpeech = {
   mimeType: "audio/mpeg";
 };
 
-type OpenAiErrorResponse = {
-  error?: { message?: string } | string;
+type ElevenLabsErrorResponse = {
+  detail?:
+    | string
+    | {
+        message?: string;
+        status?: string;
+      };
 };
 
 function readPositiveInteger(value: string | undefined, fallback: number) {
@@ -38,30 +43,34 @@ function readPositiveInteger(value: string | undefined, fallback: number) {
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-async function readOpenAiError(response: Response) {
-  const payload = (await response.json().catch(() => null)) as OpenAiErrorResponse | null;
+async function readElevenLabsError(response: Response) {
+  const payload = (await response.json().catch(() => null)) as ElevenLabsErrorResponse | null;
+  const status = typeof payload?.detail === "object" ? payload.detail.status : null;
+  const providerMessage =
+    typeof payload?.detail === "string" ? payload.detail : payload?.detail?.message;
+
+  if (status === "quota_exceeded" || response.status === 402) {
+    return "Os creditos gratuitos mensais do ElevenLabs terminaram.";
+  }
   if (response.status === 401) {
-    return "A chave OPENAI_API_KEY e invalida ou nao pertence ao projeto ativo.";
+    return "A chave ELEVENLABS_API_KEY e invalida ou foi desativada.";
   }
   if (response.status === 403) {
-    return "A chave da OpenAI nao possui permissao para gerar audio.";
+    return "A chave do ElevenLabs nao possui permissao para gerar audio.";
   }
   if (response.status === 429) {
-    return "A conta da OpenAI esta sem saldo ou atingiu o limite de uso da API.";
+    return "O limite temporario do plano gratuito do ElevenLabs foi atingido. Tente novamente mais tarde.";
   }
-  if (response.status === 404) {
-    return "O modelo de voz configurado nao esta disponivel para esta conta.";
-  }
-  if (typeof payload?.error === "string") return payload.error;
-  return payload?.error?.message || `A OpenAI respondeu com HTTP ${response.status}.`;
+
+  return providerMessage || `O ElevenLabs respondeu com HTTP ${response.status}.`;
 }
 
 export async function synthesizeSpeech(text: string): Promise<SynthesizedSpeech> {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  const apiKey = process.env.ELEVENLABS_API_KEY?.trim();
   if (!apiKey) {
     throw new SpeechSynthesisError(
       "not-configured",
-      "A chave da API de sintese de voz nao esta configurada."
+      "A chave ELEVENLABS_API_KEY nao esta configurada."
     );
   }
 
@@ -75,40 +84,46 @@ export async function synthesizeSpeech(text: string): Promise<SynthesizedSpeech>
     );
   }
 
+  const voiceId = process.env.ELEVENLABS_VOICE_ID?.trim() || DEFAULT_TTS_VOICE_ID;
   const timeoutMs = readPositiveInteger(
-    process.env.OPENAI_TTS_TIMEOUT_MS,
+    process.env.ELEVENLABS_TTS_TIMEOUT_MS,
     DEFAULT_TTS_TIMEOUT_MS
   );
 
   try {
     const response = await fetchWithTimeout(
-      OPENAI_SPEECH_URL,
+      `${ELEVENLABS_SPEECH_URL}/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`,
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json"
+          Accept: "audio/mpeg",
+          "Content-Type": "application/json",
+          "xi-api-key": apiKey
         },
         body: JSON.stringify({
-          model: process.env.OPENAI_TTS_MODEL?.trim() || DEFAULT_TTS_MODEL,
-          input,
-          voice: process.env.OPENAI_TTS_VOICE?.trim() || DEFAULT_TTS_VOICE,
-          response_format: "mp3",
-          speed: 0.95
+          text: input,
+          model_id: process.env.ELEVENLABS_TTS_MODEL?.trim() || DEFAULT_TTS_MODEL,
+          language_code: "pt",
+          voice_settings: {
+            stability: 0.55,
+            similarity_boost: 0.75,
+            style: 0.15,
+            use_speaker_boost: true
+          }
         })
       },
       timeoutMs
     );
 
     if (!response.ok) {
-      throw new SpeechSynthesisError("generation-failed", await readOpenAiError(response));
+      throw new SpeechSynthesisError("generation-failed", await readElevenLabsError(response));
     }
 
     const bytes = await response.arrayBuffer();
     if (!bytes.byteLength) {
       throw new SpeechSynthesisError(
         "generation-failed",
-        "A OpenAI retornou um arquivo de audio vazio."
+        "O ElevenLabs retornou um arquivo de audio vazio."
       );
     }
 
