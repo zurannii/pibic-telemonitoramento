@@ -202,6 +202,8 @@ Defina `GROQ_API_KEY` no ambiente do servidor para aceitar mensagens de voz e ar
 
 Os formatos aceitos pela Groq (`flac`, `mp3`, `mp4`, `mpeg`, `mpga`, `m4a`, `ogg`, `wav` e `webm`) sao enviados sem conversao. Isso inclui o OGG usado nas mensagens de voz do Telegram. Arquivos sao processados em memoria, sem temporarios em disco, e respeitam o limite de download de 20 MB da Bot API.
 
+A resposta da Groq usa `verbose_json` para validar `no_speech_prob` e `avg_logprob` antes do registro. Audios com silencio, baixa confianca ou frases tipicas de alucinacao de legendas sao descartados e seguem o mesmo tratamento amigavel de audio incompreensivel.
+
 Depois de uma transcricao bem-sucedida, o paciente recebe uma confirmacao de que o relato foi registrado e encaminhado para a equipe. O painel consulta novos dados automaticamente a cada cinco segundos e restaura a ultima tela e o perfil selecionado depois de recarregar a pagina.
 
 Toda nova mensagem recebida de um paciente pelo Telegram ou WhatsApp gera uma confirmacao automatica de recebimento. Reentregas duplicadas dos webhooks nao geram novas confirmacoes. Para pacientes com audio assistido, a confirmacao tambem e enviada em audio.

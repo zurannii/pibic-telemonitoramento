@@ -4,6 +4,8 @@ const GROQ_TRANSCRIPTION_URL = "https://api.groq.com/openai/v1/audio/transcripti
 const GROQ_TRANSCRIPTION_MODEL = "whisper-large-v3";
 const DEFAULT_TRANSCRIPTION_TIMEOUT_MS = 60_000;
 const MAX_TRANSCRIPTION_FILE_SIZE = 20 * 1024 * 1024;
+const NO_SPEECH_PROBABILITY_THRESHOLD = 0.6;
+const LOW_CONFIDENCE_LOG_PROBABILITY_THRESHOLD = -0.8;
 
 const FORMAT_ALIASES: Record<string, SupportedAudioFormat> = {
   oga: "ogg"
@@ -49,6 +51,7 @@ type SupportedAudioFormat =
 
 export type TranscriptionErrorCode =
   | "invalid-file"
+  | "low-confidence"
   | "not-configured"
   | "timeout"
   | "transcription-failed"
@@ -73,12 +76,81 @@ export type AudioTranscriptionInput = {
 
 type GroqTranscriptionResponse = {
   error?: { message?: string } | string;
+  segments?: Array<{
+    avg_logprob?: number;
+    compression_ratio?: number;
+    no_speech_prob?: number;
+    text?: string;
+  }>;
   text?: string;
 };
+
+const SUSPICIOUS_TRANSCRIPTION_PATTERNS = [
+  /\bamara\.?org\b/,
+  /\bobrigad[oa] por assistir\b/,
+  /\binscreva-se no canal\b/,
+  /\blegendas? pela comunidade\b/,
+  /^(?:legenda|legendas|subtitulo|subtitulos)(?:\s+(?:por|de))?\s+[a-z .'-]{2,80}[.!]?$/
+];
 
 function readPositiveInteger(value: string | undefined, fallback: number) {
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function normalizeTranscriptionText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isSuspiciousTranscription(text: string) {
+  const normalizedText = normalizeTranscriptionText(text);
+  return SUSPICIOUS_TRANSCRIPTION_PATTERNS.some((pattern) => pattern.test(normalizedText));
+}
+
+function hasReliableSpeech(segments: NonNullable<GroqTranscriptionResponse["segments"]>) {
+  if (!segments.length) return true;
+
+  return segments.some((segment) => {
+    const likelySilence =
+      typeof segment.no_speech_prob === "number" &&
+      segment.no_speech_prob >= NO_SPEECH_PROBABILITY_THRESHOLD;
+    const lowConfidence =
+      typeof segment.avg_logprob === "number" &&
+      segment.avg_logprob <= LOW_CONFIDENCE_LOG_PROBABILITY_THRESHOLD;
+
+    return !likelySilence && !lowConfidence;
+  });
+}
+
+function validateTranscription(payload: GroqTranscriptionResponse | null) {
+  const text = payload?.text?.trim();
+  if (!text) {
+    throw new TranscriptionError(
+      "low-confidence",
+      "A Groq nao identificou fala compreensivel no arquivo de audio."
+    );
+  }
+
+  if (isSuspiciousTranscription(text)) {
+    throw new TranscriptionError(
+      "low-confidence",
+      "A transcricao retornou uma frase tipica de legenda e foi descartada."
+    );
+  }
+
+  if (!hasReliableSpeech(payload?.segments ?? [])) {
+    throw new TranscriptionError(
+      "low-confidence",
+      "O audio contem silencio ou fala com confianca insuficiente para registro."
+    );
+  }
+
+  return text;
 }
 
 function getFileExtension(fileName?: string | null) {
@@ -153,7 +225,8 @@ export async function transcribeAudio(input: AudioTranscriptionInput): Promise<s
   const form = new FormData();
   form.append("file", new Blob([input.bytes], { type: FORMAT_MIME_TYPES[format] }), fileName);
   form.append("model", GROQ_TRANSCRIPTION_MODEL);
-  form.append("response_format", "json");
+  form.append("response_format", "verbose_json");
+  form.append("timestamp_granularities[]", "segment");
   form.append("language", "pt");
   form.append("temperature", "0");
 
@@ -180,15 +253,7 @@ export async function transcribeAudio(input: AudioTranscriptionInput): Promise<s
     }
 
     const payload = (await response.json().catch(() => null)) as GroqTranscriptionResponse | null;
-    const text = payload?.text?.trim();
-    if (!text) {
-      throw new TranscriptionError(
-        "transcription-failed",
-        "A Groq nao retornou texto para o arquivo de audio."
-      );
-    }
-
-    return text;
+    return validateTranscription(payload);
   } catch (error) {
     if (error instanceof TranscriptionError) {
       throw error;
