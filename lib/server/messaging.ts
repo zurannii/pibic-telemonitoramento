@@ -31,6 +31,9 @@ export type SendChannelResult = {
 
 const PENDING_OUTBOUND_STATUSES = new Set(["sent", "delivered", "read"]);
 
+export const INBOUND_MESSAGE_CONFIRMATION =
+  "Recebemos sua mensagem. Seu relato foi registrado e encaminhado para analise da equipe responsavel.";
+
 export function getChannelLabel(channel: MessagingChannel) {
   return channel === "telegram" ? "Telegram" : "WhatsApp";
 }

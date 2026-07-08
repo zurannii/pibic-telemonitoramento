@@ -204,6 +204,8 @@ Os formatos aceitos pela Groq (`flac`, `mp3`, `mp4`, `mpeg`, `mpga`, `m4a`, `ogg
 
 Depois de uma transcricao bem-sucedida, o paciente recebe uma confirmacao de que o relato foi registrado e encaminhado para a equipe. O painel consulta novos dados automaticamente a cada cinco segundos e restaura a ultima tela e o perfil selecionado depois de recarregar a pagina.
 
+Toda nova mensagem recebida de um paciente pelo Telegram ou WhatsApp gera uma confirmacao automatica de recebimento. Reentregas duplicadas dos webhooks nao geram novas confirmacoes. Para pacientes com audio assistido, a confirmacao tambem e enviada em audio.
+
 ### 6. Mensagens assistidas por audio
 
 Ao cadastrar um paciente, selecione **Nao alfabetizado — enviar mensagens em audio** em **Acessibilidade de leitura**. Todas as mensagens enviadas pelo fluxo central — perguntas manuais, rotinas e confirmacoes do Telegram — passam a ser sintetizadas antes do envio. O Telegram recebe uma mensagem de voz e o WhatsApp recebe um arquivo de audio pela Cloud API; o texto original continua registrado no historico para a equipe.

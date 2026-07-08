@@ -2,7 +2,11 @@ import crypto from "node:crypto";
 
 import { fail, ok } from "@/lib/server/api";
 import { matchPatientByPhone, readDb, updateDb } from "@/lib/server/db";
-import { registerInboundMessage } from "@/lib/server/messaging";
+import {
+  INBOUND_MESSAGE_CONFIRMATION,
+  registerInboundMessage,
+  sendMessageToPatientChannel
+} from "@/lib/server/messaging";
 
 export const runtime = "nodejs";
 
@@ -120,7 +124,9 @@ export async function POST(request: Request) {
     return ok({ received: true });
   }
 
-  await updateDb((currentDb) => {
+  const patientIdsToConfirm = await updateDb((currentDb) => {
+    const patientIds: string[] = [];
+
     for (const message of messages) {
       const fromPhone = typeof message.from === "string" ? message.from : "";
       if (!fromPhone) {
@@ -135,6 +141,7 @@ export async function POST(request: Request) {
       const providerMessageId = typeof message.id === "string" ? message.id : null;
       const text = extractMessageBody(message);
       const messageType = message.audio || message.voice ? "audio" : "text";
+      const previousMessageCount = currentDb.messages.length;
 
       registerInboundMessage(currentDb, patient, {
         body: text,
@@ -143,8 +150,35 @@ export async function POST(request: Request) {
         providerMessageId,
         type: messageType
       });
+
+      if (currentDb.messages.length > previousMessageCount) {
+        patientIds.push(patient.id);
+      }
     }
+
+    return patientIds;
   });
+
+  if (patientIdsToConfirm.length) {
+    const currentDb = await readDb();
+    for (const patientId of patientIdsToConfirm) {
+      const patient = currentDb.patients.find((item) => item.id === patientId);
+      if (!patient) continue;
+
+      const confirmation = await sendMessageToPatientChannel(
+        currentDb,
+        patient,
+        INBOUND_MESSAGE_CONFIRMATION,
+        "whatsapp"
+      );
+      if (!confirmation.ok) {
+        console.error("Falha ao confirmar o recebimento da mensagem no WhatsApp.", {
+          error: confirmation.error,
+          patientId
+        });
+      }
+    }
+  }
 
   return ok({ received: true });
 }

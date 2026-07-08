@@ -5,7 +5,11 @@ import {
   readDb,
   updateDb
 } from "@/lib/server/db";
-import { registerInboundMessage, sendMessageToPatientChannel } from "@/lib/server/messaging";
+import {
+  INBOUND_MESSAGE_CONFIRMATION,
+  registerInboundMessage,
+  sendMessageToPatientChannel
+} from "@/lib/server/messaging";
 import { transcribeTelegramAudio, type TelegramAudioMessage } from "@/lib/server/telegram-audio";
 import { type TelegramFileAttachment } from "@/lib/server/telegram";
 import { resolveTelegramSettings } from "@/lib/server/telegram-config";
@@ -15,8 +19,6 @@ export const runtime = "nodejs";
 
 const AUDIO_TRANSCRIPTION_ERROR_MESSAGE =
   "Não foi possível compreender o áudio. Por favor, tente novamente.";
-const AUDIO_TRANSCRIPTION_SUCCESS_MESSAGE =
-  "Recebemos seu áudio. Seu relato foi registrado e encaminhado para análise da equipe responsável.";
 
 type TelegramWebhookMessage = TelegramAudioMessage & {
   message_id?: number;
@@ -248,15 +250,15 @@ export async function POST(request: Request) {
     return currentDb.messages.length > messageCount;
   });
 
-  if (isAudio && messageRegistered) {
+  if (messageRegistered) {
     const confirmation = await sendMessageToPatientChannel(
       db,
       patient,
-      AUDIO_TRANSCRIPTION_SUCCESS_MESSAGE,
+      INBOUND_MESSAGE_CONFIRMATION,
       "telegram"
     );
     if (!confirmation.ok) {
-      console.error("Falha ao confirmar o recebimento do audio no Telegram.", {
+      console.error("Falha ao confirmar o recebimento da mensagem no Telegram.", {
         error: confirmation.error,
         providerMessageId
       });
