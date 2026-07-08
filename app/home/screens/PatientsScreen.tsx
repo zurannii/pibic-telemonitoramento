@@ -86,26 +86,26 @@ export function PatientsScreen({
           <tbody>
             {filteredPatients.map((patient) => (
               <tr key={patient.id}>
-                <td>{patient.name}</td>
-                <td>{patient.age}</td>
-                <td>{patient.phone}</td>
-                <td>
+                <td data-label="Nome">{patient.name}</td>
+                <td data-label="Idade">{patient.age}</td>
+                <td data-label="Contato">{patient.phone}</td>
+                <td data-label="Canal">
                   {translateChannel(patient.preferredChannel)}
                   {patient.preferredChannel === "telegram" && !patient.telegramLinkedAt ? " (aguardando /start)" : ""}
                   {patient.requiresAudioMessages ? " • áudio assistido" : ""}
                 </td>
-                <td>
+                <td data-label="Ultima resposta">
                   {patient.lastResponseAt
                     ? new Date(patient.lastResponseAt).toLocaleString("pt-BR")
                     : "Sem resposta ainda"}
                 </td>
-                <td>
+                <td data-label="Status">
                   <span className={cn(styles.badge, badgeTone(translateStatus(patient.status)))}>
                     {translateStatus(patient.status)}
                   </span>
                 </td>
-                <td>{patient.responsibleName ?? "Sem responsavel"}</td>
-                <td>
+                <td data-label="Responsavel">{patient.responsibleName ?? "Sem responsavel"}</td>
+                <td data-label="Acoes">
                   <div className={styles.tableActionRow}>
                     <button className={styles.tableButton} onClick={() => onOpenPatientProfile(patient.id)} type="button">
                       Ver Perfil

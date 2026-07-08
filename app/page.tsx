@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 
 import { AuthPanel } from "./home/components/AuthPanel";
@@ -20,6 +21,30 @@ import type { ScreenId } from "./home/types";
 
 export default function Home() {
   const controller = useHomeController();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileNavOpen(false);
+    };
+    const desktopQuery = window.matchMedia("(min-width: 1041px)");
+    const closeOnDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) setMobileNavOpen(false);
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    desktopQuery.addEventListener("change", closeOnDesktop);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+      desktopQuery.removeEventListener("change", closeOnDesktop);
+    };
+  }, [mobileNavOpen]);
 
   if (controller.loadingSession) {
     return <main className={styles.loadingScreen}>Carregando plataforma...</main>;
@@ -162,10 +187,29 @@ export default function Home() {
   return (
     <>
       <div className={`${styles.appShell} ${isPatientProfile ? styles.appShellSingle : ""}`}>
-        {!isPatientProfile && <Sidebar activeNav={activeNav as Exclude<ScreenId, "patient-create">} onSelectScreen={controller.selectScreen} />}
+        <Sidebar
+          activeNav={activeNav as Exclude<ScreenId, "patient-create">}
+          desktopHidden={isPatientProfile}
+          onClose={() => setMobileNavOpen(false)}
+          onSelectScreen={controller.selectScreen}
+          open={mobileNavOpen}
+        />
+        {mobileNavOpen ? (
+          <button
+            aria-label="Fechar menu principal"
+            className={styles.mobileNavOverlay}
+            onClick={() => setMobileNavOpen(false)}
+            type="button"
+          />
+        ) : null}
 
         <main className={styles.dashboard}>
-          <Topbar onLogout={controller.handleLogout} userName={bootstrap.currentUser.name} />
+          <Topbar
+            menuOpen={mobileNavOpen}
+            onLogout={controller.handleLogout}
+            onOpenMenu={() => setMobileNavOpen(true)}
+            userName={bootstrap.currentUser.name}
+          />
           <div className={styles.screenStack}>{renderScreen()}</div>
         </main>
       </div>

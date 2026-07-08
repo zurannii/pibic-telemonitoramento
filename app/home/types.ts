@@ -35,4 +35,6 @@ export type IconName =
   | "filter"
   | "microphone"
   | "edit"
-  | "save";
+  | "save"
+  | "menu"
+  | "close";

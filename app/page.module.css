@@ -2645,3 +2645,459 @@
     padding: 16px;
   }
 }
+
+/* Responsive navigation and layout */
+.sidebar {
+  height: 100vh;
+  overflow-y: auto;
+  position: sticky;
+  top: 0;
+}
+
+.sidebarDesktopHidden {
+  display: none;
+}
+
+.sidebarHeader {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 34px;
+}
+
+.brandMark {
+  flex: 1;
+  gap: 10px;
+  margin-bottom: 0;
+  min-width: 0;
+  width: auto;
+}
+
+.brandIcon {
+  flex: 0 0 48px;
+}
+
+.brandMark span {
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbarStart {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mobileMenuButton,
+.mobileCloseButton {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-body);
+  display: none;
+  flex: 0 0 auto;
+  height: 42px;
+  justify-content: center;
+  padding: 0;
+  width: 42px;
+}
+
+.mobileMenuButton svg,
+.mobileCloseButton svg {
+  height: 21px;
+  width: 21px;
+}
+
+.mobileNavOverlay {
+  display: none;
+}
+
+@media (max-width: 1040px) {
+  .appShell,
+  .appShellSingle {
+    display: block;
+    min-height: 100vh;
+  }
+
+  .dashboard {
+    min-height: 100vh;
+    width: 100%;
+  }
+
+  .sidebar,
+  .sidebar.sidebarDesktopHidden {
+    border-right: 1px solid var(--border);
+    box-shadow: 20px 0 44px rgba(15, 23, 42, 0.18);
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    inset: 0 auto 0 0;
+    max-width: 320px;
+    padding: 20px 16px;
+    pointer-events: none;
+    position: fixed;
+    transform: translateX(-105%);
+    transition: transform 220ms ease, visibility 220ms ease;
+    visibility: hidden;
+    width: min(84vw, 320px);
+    z-index: 60;
+  }
+
+  .sidebar.sidebarOpen {
+    pointer-events: auto;
+    transform: translateX(0);
+    visibility: visible;
+  }
+
+  .sidebarNav {
+    overflow-y: auto;
+  }
+
+  .mobileMenuButton,
+  .mobileCloseButton {
+    display: inline-flex;
+  }
+
+  .mobileNavOverlay {
+    background: rgba(15, 23, 42, 0.42);
+    border: 0;
+    display: block;
+    inset: 0;
+    padding: 0;
+    position: fixed;
+    z-index: 50;
+  }
+
+  .topbar {
+    z-index: 40;
+  }
+
+  .search {
+    flex: 1;
+  }
+
+  .screen,
+  .dashboard,
+  .screenStack,
+  .panel,
+  .profileScreen,
+  .profileWorkspaceBody {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 780px) {
+  .authShell,
+  .loadingScreen {
+    padding: 16px;
+  }
+
+  .authPanel {
+    gap: 16px;
+  }
+
+  .authHero,
+  .authCard,
+  .panel,
+  .questionComposerCard,
+  .questionCard,
+  .profileSectionCard {
+    padding: 16px;
+  }
+
+  .topbar {
+    align-items: center;
+    flex-direction: row;
+    gap: 12px;
+    min-height: 64px;
+    padding: 10px 16px;
+  }
+
+  .topbarStart {
+    flex: 1;
+  }
+
+  .userChip {
+    flex: 0 1 auto;
+    min-width: 0;
+    padding: 6px 8px;
+  }
+
+  .userName {
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .screen {
+    gap: 16px;
+  }
+
+  .pageHead {
+    gap: 14px;
+    width: 100%;
+  }
+
+  .pageHead > .primaryButton {
+    width: 100%;
+  }
+
+  .pageHeading h1,
+  .profileIdentity h1 {
+    font-size: clamp(1.5rem, 8vw, 2rem);
+    overflow-wrap: anywhere;
+  }
+
+  .statsGrid,
+  .summaryGrid,
+  .summaryGridAlerts,
+  .profileReportStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .statCard,
+  .summaryCard {
+    min-height: 112px;
+  }
+
+  .toolbar,
+  .toolbarGroup {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .toolbarSearch {
+    max-width: none;
+  }
+
+  .profileHeaderCard {
+    padding: 18px;
+  }
+
+  .profileWorkspaceBody {
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .profileTabs,
+  .questionTabs {
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 0 12px 6px;
+    scrollbar-width: thin;
+  }
+
+  .profileTab,
+  .questionTab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .formActions,
+  .questionFooterActions,
+  .modalActions {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .formActions > button,
+  .questionFooterActions > button,
+  .modalActions > button {
+    min-height: 44px;
+    width: 100%;
+  }
+
+  .infoRow {
+    align-items: flex-start;
+  }
+
+  .infoRow span,
+  .profileSectionCard p,
+  .profileResponseTextBlock p,
+  .profileResponseTranscript p {
+    overflow-wrap: anywhere;
+  }
+
+  .tablePanel {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .tablePanel > h2 {
+    margin: 0 0 12px;
+  }
+
+  .dataTable {
+    display: block;
+    min-width: 0;
+  }
+
+  .dataTable thead {
+    display: none;
+  }
+
+  .dataTable tbody {
+    display: grid;
+    gap: 12px;
+  }
+
+  .dataTable tr {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    display: grid;
+    padding: 10px 14px;
+  }
+
+  .dataTable td {
+    align-items: start;
+    border-bottom: 1px solid var(--border-soft);
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(94px, 36%) minmax(0, 1fr);
+    overflow-wrap: anywhere;
+    padding: 10px 0;
+  }
+
+  .dataTable td:last-child {
+    border-bottom: 0;
+  }
+
+  .dataTable td::before {
+    color: var(--text-muted);
+    content: attr(data-label);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .tableActionRow {
+    align-items: stretch;
+  }
+
+  .tableActionRow button,
+  .dataTable td > button {
+    min-height: 38px;
+  }
+
+  .tableFooter {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+  }
+
+  .miniBar {
+    grid-template-columns: 72px minmax(0, 1fr) 24px;
+  }
+
+  .toastStack {
+    left: 12px;
+    right: 12px;
+    top: 12px;
+    width: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .search {
+    display: none;
+  }
+
+  .topbarStart {
+    flex: 0 0 auto;
+  }
+
+  .userChip {
+    margin-left: auto;
+  }
+
+  .userName {
+    max-width: 88px;
+  }
+
+  .screenStack {
+    padding: 12px;
+  }
+
+  .statsGrid,
+  .summaryGrid,
+  .summaryGridAlerts,
+  .profileReportStats {
+    grid-template-columns: 1fr;
+  }
+
+  .profileHeaderMain,
+  .profileTeamCardTop {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .profileAvatar {
+    height: 52px;
+    width: 52px;
+  }
+
+  .profileStatusRow,
+  .filters,
+  .segmentedControl,
+  .alertRecordActions,
+  .questionActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filters button,
+  .segmentedControl button,
+  .alertRecordActions button,
+  .questionActions button {
+    min-height: 42px;
+    width: 100%;
+  }
+
+  .dataTable td {
+    gap: 5px;
+    grid-template-columns: 1fr;
+  }
+
+  .tableActionRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tableActionRow button {
+    width: 100%;
+  }
+
+  .modalBackdrop {
+    align-items: flex-end;
+    padding: 12px;
+  }
+
+  .modalCard {
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    padding: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
+}

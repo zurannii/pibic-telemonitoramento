@@ -330,14 +330,14 @@ export function TeamScreen({
           <tbody>
             {users.map((user) => (
               <tr key={user.id}>
-                <td>{user.name}</td>
-                <td>{user.specialty}</td>
-                <td>{user.role}</td>
-                <td>{user.email}</td>
-                <td>
+                <td data-label="Nome">{user.name}</td>
+                <td data-label="Especialidade">{user.specialty}</td>
+                <td data-label="Funcao">{user.role}</td>
+                <td data-label="Email">{user.email}</td>
+                <td data-label="Status">
                   <span className={cn(styles.badge, badgeTone("Ativo"))}>Ativo</span>
                 </td>
-                <td>
+                <td data-label="Acoes">
                   {user.id !== currentUser.id ? (
                     <button className={styles.tableButton} onClick={() => onDeleteUser(user.id)} type="button">
                       Excluir
