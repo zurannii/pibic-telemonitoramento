@@ -3,7 +3,7 @@ import { updateDb } from "@/lib/server/db";
 import {
   buildChannelMessageFields,
   createDeliveryAlert,
-  sendTextToPatientChannel
+  sendMessageToPatientChannel
 } from "@/lib/server/messaging";
 import { createId, nowIso } from "@/lib/server/utils";
 
@@ -42,7 +42,7 @@ export async function POST(request: Request, context: RouteContext) {
       return { kind: "missing-message" as const };
     }
 
-    const sendResult = await sendTextToPatientChannel(
+    const sendResult = await sendMessageToPatientChannel(
       db,
       patient,
       messageBody,
@@ -54,7 +54,7 @@ export async function POST(request: Request, context: RouteContext) {
       questionId: question?.id ?? null,
       scheduleId: null,
       direction: "outbound" as const,
-      type: "text" as const,
+      type: sendResult.messageType,
       body: messageBody,
       status: sendResult.ok ? ("sent" as const) : ("failed" as const),
       sentAt: sendResult.ok ? nowIso() : null,

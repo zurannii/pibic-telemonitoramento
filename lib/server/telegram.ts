@@ -16,6 +16,12 @@ export type SendTelegramResult = {
   error: string | null;
 };
 
+export type TelegramVoiceInput = {
+  bytes: ArrayBuffer;
+  fileName: string;
+  mimeType: string;
+};
+
 export type TelegramFileAttachment = {
   file_id: string;
   file_name?: string;
@@ -332,6 +338,59 @@ export async function sendTelegramTextMessage(
 
     if (!response.ok || !payload.ok) {
       return { ok: false, messageId: null, error: payload.description ?? "Falha na API do Telegram." };
+    }
+
+    return { ok: true, messageId: String(payload.result?.message_id), error: null };
+  } catch (error) {
+    return {
+      ok: false,
+      messageId: null,
+      error: error instanceof Error ? error.message : "Erro interno ao conectar com o Telegram."
+    };
+  }
+}
+
+export async function sendTelegramVoiceMessage(
+  settings: TelegramSettings,
+  chatId: string,
+  audio: TelegramVoiceInput
+): Promise<SendTelegramResult> {
+  if (!isTelegramConfigured(settings)) {
+    return {
+      ok: false,
+      messageId: null,
+      error: "A integracao com o Telegram esta desativada ou incompleta."
+    };
+  }
+
+  if (!chatId) {
+    return {
+      ok: false,
+      messageId: null,
+      error: "Paciente ainda nao vinculou o Telegram (aguardando /start)."
+    };
+  }
+
+  const form = new FormData();
+  form.append("chat_id", chatId);
+  form.append("voice", new Blob([audio.bytes], { type: audio.mimeType }), audio.fileName);
+
+  try {
+    const response = await fetchWithTimeout(
+      `https://api.telegram.org/bot${settings.botToken}/sendVoice`,
+      { method: "POST", body: form },
+      TELEGRAM_REQUEST_TIMEOUT_MS
+    );
+    const payload = (await response.json().catch(() => null)) as
+      | TelegramApiResponse<{ message_id: number }>
+      | null;
+
+    if (!response.ok || !payload?.ok) {
+      return {
+        ok: false,
+        messageId: null,
+        error: payload?.description ?? "Falha ao enviar audio pela API do Telegram."
+      };
     }
 
     return { ok: true, messageId: String(payload.result?.message_id), error: null };

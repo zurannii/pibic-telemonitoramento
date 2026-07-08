@@ -13,6 +13,7 @@ O projeto usa Next.js com App Router, React, TypeScript, Prisma e PostgreSQL. Qu
 - alertas clinicos e historico de mensagens;
 - envio e recebimento de mensagens pelo Telegram;
 - envio e recebimento de mensagens pelo WhatsApp Cloud API;
+- mensagens assistidas por voz natural para pacientes nao alfabetizados;
 - painel responsivo para desktop e dispositivos moveis.
 
 ## Tecnologias
@@ -107,6 +108,10 @@ Troque ou remova essas credenciais antes de utilizar o sistema com dados reais.
 | `TELEGRAM_WEBHOOK_SECRET` | Recomendado | Valida as requisicoes recebidas do Telegram. |
 | `GROQ_API_KEY` | Para transcricao | Chave usada exclusivamente no servidor para transcrever audios. |
 | `GROQ_TRANSCRIPTION_TIMEOUT_MS` | Nao | Timeout da transcricao em milissegundos (padrao: `60000`). |
+| `OPENAI_API_KEY` | Para mensagens em audio | Chave usada exclusivamente no servidor para gerar a voz das mensagens. |
+| `OPENAI_TTS_MODEL` | Nao | Modelo de voz (padrao: `tts-1-hd`). |
+| `OPENAI_TTS_VOICE` | Nao | Voz usada na leitura das mensagens (padrao: `nova`). |
+| `OPENAI_TTS_TIMEOUT_MS` | Nao | Timeout da geracao de voz em milissegundos (padrao: `60000`). |
 | `DATABASE_URL` | Sim em producao | Transaction Pooler do Supabase usado pela aplicacao. |
 | `DIRECT_URL` | Para migrations locais | Conexao direta ou Session Pooler usada pelo Prisma CLI. |
 
@@ -199,6 +204,12 @@ Os formatos aceitos pela Groq (`flac`, `mp3`, `mp4`, `mpeg`, `mpga`, `m4a`, `ogg
 
 Depois de uma transcricao bem-sucedida, o paciente recebe uma confirmacao de que o relato foi registrado e encaminhado para a equipe. O painel consulta novos dados automaticamente a cada cinco segundos e restaura a ultima tela e o perfil selecionado depois de recarregar a pagina.
 
+### 6. Mensagens assistidas por audio
+
+Ao cadastrar um paciente, selecione **Nao alfabetizado — enviar mensagens em audio** em **Acessibilidade de leitura**. Todas as mensagens enviadas pelo fluxo central — perguntas manuais, rotinas e confirmacoes do Telegram — passam a ser sintetizadas antes do envio. O Telegram recebe uma mensagem de voz e o WhatsApp recebe um arquivo de audio pela Cloud API; o texto original continua registrado no historico para a equipe.
+
+Configure `OPENAI_API_KEY` somente no servidor. Por padrao, o projeto usa o modelo `tts-1-hd`, a voz `nova`, MP3 e uma velocidade levemente reduzida para favorecer clareza. Modelo e voz podem ser ajustados pelas variaveis `OPENAI_TTS_MODEL` e `OPENAI_TTS_VOICE` sem alterar o codigo. Se a geracao ou o envio falhar, o sistema nao substitui silenciosamente o audio por texto: ele registra a falha e cria o alerta de entrega existente.
+
 A tela **Relatorios** permite selecionar um paciente, consolidar todas as respostas clinicamente relevantes, visualizar intensidade e evolucao da dor, temas recorrentes, alertas e uma linha do tempo completa. O relatorio pode ser exportado diretamente em PDF e sempre inclui o aviso de revisao por profissional de saude.
 
 ## WhatsApp Cloud API
@@ -253,6 +264,8 @@ vercel env add TELEGRAM_ENABLED production
 vercel env add TELEGRAM_BOT_TOKEN production
 vercel env add TELEGRAM_BOT_USERNAME production
 vercel env add TELEGRAM_WEBHOOK_SECRET production
+vercel env add GROQ_API_KEY production
+vercel env add OPENAI_API_KEY production
 vercel env add DATABASE_URL production
 ```
 
@@ -395,6 +408,7 @@ Confirme tambem:
 - Verify Token e App Secret do WhatsApp configurados;
 - credenciais de demonstracao removidas;
 - `DATABASE_URL` apontando para o banco PostgreSQL de producao;
+- `GROQ_API_KEY` para compreender audios recebidos e `OPENAI_API_KEY` para responder em voz;
 - politica de backup, controle de acesso, auditoria e adequacao a LGPD.
 
 ## Problemas comuns

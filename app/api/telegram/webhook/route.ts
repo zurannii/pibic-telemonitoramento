@@ -5,12 +5,9 @@ import {
   readDb,
   updateDb
 } from "@/lib/server/db";
-import { registerInboundMessage } from "@/lib/server/messaging";
+import { registerInboundMessage, sendMessageToPatientChannel } from "@/lib/server/messaging";
 import { transcribeTelegramAudio, type TelegramAudioMessage } from "@/lib/server/telegram-audio";
-import {
-  sendTelegramTextMessage,
-  type TelegramFileAttachment
-} from "@/lib/server/telegram";
+import { type TelegramFileAttachment } from "@/lib/server/telegram";
 import { resolveTelegramSettings } from "@/lib/server/telegram-config";
 import { nowIso } from "@/lib/server/utils";
 
@@ -174,15 +171,20 @@ export async function POST(request: Request) {
         replyToMessageId: null
       });
 
-      return { patientName: patient.name };
+      return { patientId: patient.id, patientName: patient.name };
     });
 
     if (result) {
-      await sendTelegramTextMessage(
-        telegramSettings,
-        chatId,
-        `Vinculo realizado com sucesso para ${result.patientName}.`
-      );
+      const currentDb = await readDb();
+      const currentPatient = currentDb.patients.find((item) => item.id === result.patientId);
+      if (currentPatient) {
+        await sendMessageToPatientChannel(
+          currentDb,
+          currentPatient,
+          `Vinculo realizado com sucesso para ${result.patientName}.`,
+          "telegram"
+        );
+      }
     }
 
     return ok({ received: true });
@@ -212,10 +214,11 @@ export async function POST(request: Request) {
         providerMessageId
       });
 
-      const notification = await sendTelegramTextMessage(
-        telegramSettings,
-        chatId,
-        AUDIO_TRANSCRIPTION_ERROR_MESSAGE
+      const notification = await sendMessageToPatientChannel(
+        db,
+        patient,
+        AUDIO_TRANSCRIPTION_ERROR_MESSAGE,
+        "telegram"
       );
       if (!notification.ok) {
         console.error("Falha ao notificar usuario sobre erro na transcricao do Telegram.", {
@@ -246,10 +249,11 @@ export async function POST(request: Request) {
   });
 
   if (isAudio && messageRegistered) {
-    const confirmation = await sendTelegramTextMessage(
-      telegramSettings,
-      chatId,
-      AUDIO_TRANSCRIPTION_SUCCESS_MESSAGE
+    const confirmation = await sendMessageToPatientChannel(
+      db,
+      patient,
+      AUDIO_TRANSCRIPTION_SUCCESS_MESSAGE,
+      "telegram"
     );
     if (!confirmation.ok) {
       console.error("Falha ao confirmar o recebimento do audio no Telegram.", {

@@ -158,6 +158,9 @@ export function PatientProfileScreen({
               <span className={cn(styles.badge, badgeTone(statusLabel(details.patient.status)))}>
                 {statusLabel(details.patient.status)}
               </span>
+              {details.patient.requiresAudioMessages ? (
+                <span className={cn(styles.badge, styles.badgeSoft)}>Mensagens assistidas por audio</span>
+              ) : null}
               <span>Responsavel: {responsibleName}</span>
             </div>
           </div>
@@ -265,7 +268,9 @@ export function PatientProfileScreen({
               <section className={styles.profileSectionCard}>
                 <h2>Enviar mensagem ao paciente</h2>
                 <p className={styles.infoText}>
-                  Envie uma pergunta cadastrada ou escreva uma mensagem personalizada.
+                  {details.patient.requiresAudioMessages
+                    ? "As perguntas e mensagens sao convertidas automaticamente em audio antes do envio."
+                    : "Envie uma pergunta cadastrada ou escreva uma mensagem personalizada."}
                 </p>
                 <div className={styles.profileInfoGrid}>
                   <label className={styles.field}>

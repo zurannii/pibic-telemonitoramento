@@ -1,6 +1,6 @@
 import type { DatabaseShape, MessageLogRecord, ScheduleRecord } from "../shared/types";
 import { readDb, updateDb, updatePatientStatusFromAlerts } from "./db";
-import { buildChannelMessageFields, createDeliveryAlert, sendTextToPatientChannel } from "./messaging";
+import { buildChannelMessageFields, createDeliveryAlert, sendMessageToPatientChannel } from "./messaging";
 import { createId, getLocalScheduleSnapshot, nowIso } from "./utils";
 
 declare global {
@@ -105,6 +105,7 @@ async function processDueSchedules() {
     ok: boolean;
     messageId: string | null;
     error: string | null;
+    messageType?: "text" | "audio";
   }> = [];
 
   for (const schedule of dueSchedules) {
@@ -122,7 +123,7 @@ async function processDueSchedules() {
     }
 
     const body = question.simpleText || question.text;
-    const result = await sendTextToPatientChannel(db, patient, body);
+    const result = await sendMessageToPatientChannel(db, patient, body);
 
     results.push({
       scheduleId: schedule.id,
@@ -152,7 +153,7 @@ async function processDueSchedules() {
           questionId: result.questionId ?? null,
           scheduleId: schedule.id,
           direction: "outbound",
-          type: "text",
+          type: result.messageType ?? "text",
           body: result.body ?? "",
           status: "sent",
           sentAt: result.sentAt ?? nowIso(),
@@ -171,7 +172,7 @@ async function processDueSchedules() {
         questionId: result.questionId ?? schedule.questionId,
         scheduleId: schedule.id,
         direction: "outbound",
-        type: "text",
+        type: result.messageType ?? "text",
         body: result.body ?? "",
         status: "failed",
         sentAt: null,
