@@ -2,10 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import styles from "../../page.module.css";
-import type { PatientDetails, PublicUser, QuestionRecord } from "@/lib/shared/types";
+import type {
+  PatientDetails,
+  PatientReport,
+  PublicUser,
+  QuestionRecord
+} from "@/lib/shared/types";
 import type { PatientProfileTab } from "../types";
 import { badgeTone, cn } from "../utils";
 import { Icon } from "../components/Icon";
+import { ReportsScreen } from "./ReportsScreen";
 
 type PatientProfileScreenProps = {
   details: PatientDetails;
@@ -20,6 +26,7 @@ type PatientProfileScreenProps = {
   onBack: () => void;
   onDeleteSchedule: (patientId: string, scheduleId: string) => void;
   onResolveAlert: (alertId: string) => void;
+  onGenerateReport: (patientId: string) => Promise<PatientReport | undefined>;
   onSendMessage: (
     patientId: string,
     payload: { questionId?: string; text?: string; channel?: "whatsapp" | "telegram" }
@@ -63,6 +70,7 @@ export function PatientProfileScreen({
   onBack,
   onDeleteSchedule,
   onResolveAlert,
+  onGenerateReport,
   onSelectTab,
   onSendMessage,
   questions,
@@ -491,13 +499,10 @@ export function PatientProfileScreen({
           )}
 
           {activeTab === "reports" && (
-            <section className={styles.profileSectionCard}>
-              <h2>Resumo para apresentacao</h2>
-              <p>
-                Este paciente tem {details.schedules.length} rotina(s) ativa(s), {responseCount} resposta(s)
-                recebida(s) e {activeAlertCount} alerta(s) aberto(s).
-              </p>
-            </section>
+            <ReportsScreen
+              embeddedPatientId={details.patient.id}
+              onGenerateReport={onGenerateReport}
+            />
           )}
 
           {activeTab === "conduct" && (

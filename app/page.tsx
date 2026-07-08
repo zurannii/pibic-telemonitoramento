@@ -103,6 +103,7 @@ export default function Home() {
             onAddSchedule={controller.handleAddSchedule}
             onBack={() => controller.selectScreen("patients")}
             onDeleteSchedule={controller.confirmDeleteSchedule}
+            onGenerateReport={controller.generatePatientReport}
             onResolveAlert={controller.confirmResolveAlert}
             onSelectTab={controller.setActivePatientProfileTab}
             onSendMessage={controller.handleSendMessage}

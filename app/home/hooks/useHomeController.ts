@@ -345,6 +345,7 @@ export function useHomeController() {
     condition: string;
     responsibleUserId: string;
     preferredResponseFormat: "text" | "audio" | "buttons";
+    requiresAudioMessages: boolean;
     preferredChannel: "whatsapp" | "telegram";
     contactWindowStart: string;
     contactWindowEnd: string;

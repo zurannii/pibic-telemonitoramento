@@ -1,4 +1,4 @@
-import { ok, fail, readString, requireUser } from "@/lib/server/api";
+import { ok, fail, readBoolean, readString, requireUser } from "@/lib/server/api";
 import { buildPatientList, updateDb } from "@/lib/server/db";
 import { createId, nowIso, normalizePhone } from "@/lib/server/utils";
 
@@ -28,6 +28,7 @@ export async function POST(request: Request) {
   const preferredResponseFormat =
     readString(body?.preferredResponseFormat) || "text";
   const preferredChannel = readString(body?.preferredChannel) === "telegram" ? "telegram" : "whatsapp";
+  const requiresAudioMessages = readBoolean(body?.requiresAudioMessages);
   const responsibleUserId = readString(body?.responsibleUserId) || null;
   const contactWindowStart = readString(body?.contactWindowStart) || "09:00";
   const contactWindowEnd = readString(body?.contactWindowEnd) || "21:00";
@@ -47,9 +48,12 @@ export async function POST(request: Request) {
       notes,
       responsibleUserId,
       preferredResponseFormat:
-        preferredResponseFormat === "audio" || preferredResponseFormat === "buttons"
+        requiresAudioMessages
+          ? "audio"
+          : preferredResponseFormat === "audio" || preferredResponseFormat === "buttons"
           ? preferredResponseFormat
           : "text",
+      requiresAudioMessages,
       preferredChannel,
       contactWindowStart,
       contactWindowEnd,

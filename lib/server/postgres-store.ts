@@ -76,6 +76,7 @@ export async function readPostgresDatabase(client: DatabaseClient = getPrisma())
         responsibleUserId: patient.responsibleUserId,
         preferredResponseFormat:
           patient.preferredResponseFormat as PatientRecord["preferredResponseFormat"],
+        requiresAudioMessages: patient.requiresAudioMessages,
         preferredChannel: patient.preferredChannel as PatientRecord["preferredChannel"],
         contactWindowStart: patient.contactWindowStart,
         contactWindowEnd: patient.contactWindowEnd,
@@ -221,6 +222,7 @@ async function syncPostgresDatabase(
       notes: patient.notes,
       responsibleUserId: patient.responsibleUserId,
       preferredResponseFormat: patient.preferredResponseFormat,
+      requiresAudioMessages: patient.requiresAudioMessages,
       preferredChannel: patient.preferredChannel,
       contactWindowStart: patient.contactWindowStart,
       contactWindowEnd: patient.contactWindowEnd,

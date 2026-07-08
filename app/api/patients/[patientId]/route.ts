@@ -1,4 +1,4 @@
-import { fail, ok, readString, requireUser } from "@/lib/server/api";
+import { fail, ok, readBoolean, readString, requireUser } from "@/lib/server/api";
 import { buildPatientDetails, updateDb } from "@/lib/server/db";
 import { nowIso, normalizePhone } from "@/lib/server/utils";
 
@@ -60,6 +60,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (responsibleUserId !== undefined) patient.responsibleUserId = responsibleUserId || null;
     if (body?.age !== undefined && !Number.isNaN(Number(body.age))) patient.age = Number(body.age);
     if (body?.preferredResponseFormat) patient.preferredResponseFormat = body.preferredResponseFormat;
+    if (body?.requiresAudioMessages !== undefined) {
+      patient.requiresAudioMessages = readBoolean(body.requiresAudioMessages);
+      if (patient.requiresAudioMessages) patient.preferredResponseFormat = "audio";
+    }
     if (preferredChannel === "telegram" || preferredChannel === "whatsapp") patient.preferredChannel = preferredChannel;
     if (body?.telegramChatId !== undefined) {
       patient.telegramChatId = telegramChatId || null;

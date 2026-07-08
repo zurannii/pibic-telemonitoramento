@@ -69,6 +69,7 @@ function normalizeDbShape(value: DatabaseShape): DatabaseShape {
       ? value.patients.map((patient) => ({
           ...patient,
           preferredChannel: patient.preferredChannel === "telegram" ? "telegram" : "whatsapp",
+          requiresAudioMessages: patient.requiresAudioMessages === true,
           telegramChatId: readOptionalString(patient.telegramChatId),
           telegramUsername: readOptionalString(patient.telegramUsername),
           telegramLinkToken: readOptionalString(patient.telegramLinkToken) ?? createTelegramLinkToken(),
@@ -185,6 +186,7 @@ async function buildSeedDatabase() {
         notes: "Paciente com piora noturna recorrente.",
         responsibleUserId: adminId,
         preferredResponseFormat: "text",
+        requiresAudioMessages: false,
         preferredChannel: "whatsapp",
         contactWindowStart: "09:00",
         contactWindowEnd: "21:00",
@@ -205,6 +207,7 @@ async function buildSeedDatabase() {
         notes: "Boa adesão geral, precisa seguir atividade física.",
         responsibleUserId: professionalId,
         preferredResponseFormat: "buttons",
+        requiresAudioMessages: false,
         preferredChannel: "whatsapp",
         contactWindowStart: "08:00",
         contactWindowEnd: "20:00",
@@ -439,6 +442,7 @@ export async function buildPatientList(db?: DatabaseShape): Promise<PatientListI
         lastResponseAt: lastInbound?.receivedAt ?? null,
         responsibleName: responsible?.name ?? null,
         preferredResponseFormat: patient.preferredResponseFormat,
+        requiresAudioMessages: patient.requiresAudioMessages,
         preferredChannel: patient.preferredChannel,
         telegramLinkedAt: patient.telegramLinkedAt
       };

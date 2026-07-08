@@ -36,6 +36,7 @@ export type PatientRecord = {
   notes: string;
   responsibleUserId: string | null;
   preferredResponseFormat: ResponseFormat;
+  requiresAudioMessages: boolean;
   preferredChannel: MessagingChannel;
   contactWindowStart: string;
   contactWindowEnd: string;
@@ -205,6 +206,7 @@ export type PatientListItem = {
   lastResponseAt: string | null;
   responsibleName: string | null;
   preferredResponseFormat: ResponseFormat;
+  requiresAudioMessages: boolean;
   preferredChannel: MessagingChannel;
   telegramLinkedAt: string | null;
 };

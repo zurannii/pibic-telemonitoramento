@@ -92,6 +92,7 @@ export function PatientsScreen({
                 <td>
                   {translateChannel(patient.preferredChannel)}
                   {patient.preferredChannel === "telegram" && !patient.telegramLinkedAt ? " (aguardando /start)" : ""}
+                  {patient.requiresAudioMessages ? " • áudio assistido" : ""}
                 </td>
                 <td>
                   {patient.lastResponseAt

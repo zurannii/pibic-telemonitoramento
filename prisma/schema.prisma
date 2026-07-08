@@ -35,6 +35,7 @@ model Patient {
   notes                   String
   responsibleUserId       String?
   preferredResponseFormat String
+  requiresAudioMessages    Boolean    @default(false)
   preferredChannel        String
   contactWindowStart      String
   contactWindowEnd        String

@@ -12,9 +12,10 @@ import type {
 import { cn } from "../utils";
 
 type ReportsScreenProps = {
-  dashboard: DashboardSummary;
+  dashboard?: DashboardSummary;
+  embeddedPatientId?: string;
   onGenerateReport: (patientId: string) => Promise<PatientReport | undefined>;
-  patients: PatientListItem[];
+  patients?: PatientListItem[];
 };
 
 function formatDate(value: string | null) {
@@ -138,17 +139,30 @@ async function exportReportPdf(report: PatientReport) {
   pdf.save(`relatorio-${slugify(report.patient.name) || "paciente"}.pdf`);
 }
 
-export function ReportsScreen({ dashboard, onGenerateReport, patients }: ReportsScreenProps) {
-  const [selectedPatientId, setSelectedPatientId] = useState(patients[0]?.id ?? "");
+export function ReportsScreen({
+  dashboard,
+  embeddedPatientId,
+  onGenerateReport,
+  patients = []
+}: ReportsScreenProps) {
+  const [selectedPatientId, setSelectedPatientId] = useState(
+    embeddedPatientId ?? patients[0]?.id ?? ""
+  );
   const [report, setReport] = useState<PatientReport | null>(null);
   const [loadingReport, setLoadingReport] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
 
   useEffect(() => {
+    if (embeddedPatientId) {
+      setSelectedPatientId(embeddedPatientId);
+      setReport(null);
+      return;
+    }
+
     if (selectedPatientId && patients.some((patient) => patient.id === selectedPatientId)) return;
     setSelectedPatientId(patients[0]?.id ?? "");
     setReport(null);
-  }, [patients, selectedPatientId]);
+  }, [embeddedPatientId, patients, selectedPatientId]);
 
   const criticalCount = patients.filter((patient) => patient.status === "critical").length;
   const attentionCount = patients.filter((patient) => patient.status === "attention").length;
@@ -178,53 +192,57 @@ export function ReportsScreen({ dashboard, onGenerateReport, patients }: Reports
   };
 
   return (
-    <section className={styles.screen}>
-      <div className={styles.pageHead}>
-        <div className={styles.pageHeading}>
-          <h1>Relatórios</h1>
-          <p>Consolidação das respostas e evolução relatada por cada paciente.</p>
-        </div>
-      </div>
+    <section className={embeddedPatientId ? undefined : styles.screen}>
+      {!embeddedPatientId && dashboard && (
+        <>
+          <div className={styles.pageHead}>
+            <div className={styles.pageHeading}>
+              <h1>Relatórios</h1>
+              <p>Consolidação das respostas e evolução relatada por cada paciente.</p>
+            </div>
+          </div>
 
-      <section className={styles.reportCards}>
-        <article className={cn(styles.panel, styles.reportCard)}>
-          <h2>Pacientes ativos</h2>
-          <p>{dashboard.totalPatients} cadastros disponíveis para acompanhamento.</p>
-        </article>
-        <article className={cn(styles.panel, styles.reportCard)}>
-          <h2>Respostas hoje</h2>
-          <p>{dashboard.responsesToday} interações recebidas hoje.</p>
-        </article>
-        <article className={cn(styles.panel, styles.reportCard)}>
-          <h2>Rotinas agendadas</h2>
-          <p>{dashboard.scheduledMessages} rotinas configuradas.</p>
-        </article>
-      </section>
+          <section className={styles.reportCards}>
+            <article className={cn(styles.panel, styles.reportCard)}>
+              <h2>Pacientes ativos</h2>
+              <p>{dashboard.totalPatients} cadastros disponíveis para acompanhamento.</p>
+            </article>
+            <article className={cn(styles.panel, styles.reportCard)}>
+              <h2>Respostas hoje</h2>
+              <p>{dashboard.responsesToday} interações recebidas hoje.</p>
+            </article>
+            <article className={cn(styles.panel, styles.reportCard)}>
+              <h2>Rotinas agendadas</h2>
+              <p>{dashboard.scheduledMessages} rotinas configuradas.</p>
+            </article>
+          </section>
 
-      <section className={cn(styles.panel, styles.reportSummary)}>
-        <div className={styles.summaryGrid}>
-          <article className={styles.summaryCard}>
-            <strong>{stableCount}</strong>
-            <small>Estáveis</small>
-          </article>
-          <article className={styles.summaryCard}>
-            <strong>{attentionCount}</strong>
-            <small>Atenção</small>
-          </article>
-          <article className={styles.summaryCard}>
-            <strong>{criticalCount}</strong>
-            <small>Críticos</small>
-          </article>
-          <article className={styles.summaryCard}>
-            <strong>{dashboard.activeAlerts}</strong>
-            <small>Alertas ativos</small>
-          </article>
-        </div>
-      </section>
+          <section className={cn(styles.panel, styles.reportSummary)}>
+            <div className={styles.summaryGrid}>
+              <article className={styles.summaryCard}>
+                <strong>{stableCount}</strong>
+                <small>Estáveis</small>
+              </article>
+              <article className={styles.summaryCard}>
+                <strong>{attentionCount}</strong>
+                <small>Atenção</small>
+              </article>
+              <article className={styles.summaryCard}>
+                <strong>{criticalCount}</strong>
+                <small>Críticos</small>
+              </article>
+              <article className={styles.summaryCard}>
+                <strong>{dashboard.activeAlerts}</strong>
+                <small>Alertas ativos</small>
+              </article>
+            </div>
+          </section>
+        </>
+      )}
 
       <section className={styles.profileSectionCard}>
-        <h2>Relatório individual</h2>
-        <div className={styles.profileInfoGrid}>
+        <h2>{embeddedPatientId ? "Resumo e análise do acompanhamento" : "Relatório individual"}</h2>
+        {!embeddedPatientId && <div className={styles.profileInfoGrid}>
           <label className={styles.field}>
             <span>Paciente</span>
             <select
@@ -241,7 +259,7 @@ export function ReportsScreen({ dashboard, onGenerateReport, patients }: Reports
               ))}
             </select>
           </label>
-        </div>
+        </div>}
         <div className={styles.formActions}>
           <button
             className={styles.primaryButton}

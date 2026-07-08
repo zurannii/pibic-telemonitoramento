@@ -15,6 +15,7 @@ type PatientCreateScreenProps = {
     condition: string;
     responsibleUserId: string;
     preferredResponseFormat: "text" | "audio" | "buttons";
+    requiresAudioMessages: boolean;
     preferredChannel: "whatsapp" | "telegram";
     contactWindowStart: string;
     contactWindowEnd: string;
@@ -24,22 +25,50 @@ type PatientCreateScreenProps = {
   selectScreen: (screen: ScreenId) => void;
 };
 
+const CONDITION_SUGGESTIONS = [
+  "Artrite reumatoide",
+  "Fibromialgia",
+  "Dor crônica lombar",
+  "Dor crônica musculoesquelética",
+  "Artrose",
+  "Lúpus eritematoso sistêmico",
+  "Espondilite anquilosante",
+  "Neuropatia periférica",
+  "Pós-operatório ortopédico",
+  "Cefaleia crônica"
+];
+
+type PatientForm = {
+  name: string;
+  age: string;
+  phone: string;
+  condition: string;
+  responsibleUserId: string;
+  preferredResponseFormat: "text" | "audio" | "buttons";
+  requiresAudioMessages: boolean;
+  preferredChannel: "whatsapp" | "telegram";
+  contactWindowStart: string;
+  contactWindowEnd: string;
+  notes: string;
+};
+
 export function PatientCreateScreen({ onSubmit, professionals, selectScreen }: PatientCreateScreenProps) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<PatientForm>({
     name: "",
     age: "",
     phone: "",
     condition: "",
     responsibleUserId: professionals[0]?.id ?? "",
-    preferredResponseFormat: "text" as const,
-    preferredChannel: "whatsapp" as const,
+    preferredResponseFormat: "text",
+    requiresAudioMessages: false,
+    preferredChannel: "whatsapp",
     contactWindowStart: "09:00",
     contactWindowEnd: "21:00",
     notes: ""
   });
   const [busy, setBusy] = useState(false);
 
-  const updateField = (key: keyof typeof form, value: string) => {
+  const updateField = <Key extends keyof PatientForm>(key: Key, value: PatientForm[Key]) => {
     setForm((current) => ({
       ...current,
       [key]: value
@@ -83,7 +112,17 @@ export function PatientCreateScreen({ onSubmit, professionals, selectScreen }: P
           </label>
           <label className={styles.field}>
             <span>Condicao Principal *</span>
-            <input onChange={(event) => updateField("condition", event.target.value)} value={form.condition} />
+            <input
+              list="patient-condition-suggestions"
+              onChange={(event) => updateField("condition", event.target.value)}
+              placeholder="Selecione ou digite outra condição"
+              value={form.condition}
+            />
+            <datalist id="patient-condition-suggestions">
+              {CONDITION_SUGGESTIONS.map((condition) => (
+                <option key={condition} value={condition} />
+              ))}
+            </datalist>
           </label>
         </div>
       </section>
@@ -108,7 +147,12 @@ export function PatientCreateScreen({ onSubmit, professionals, selectScreen }: P
           <label className={styles.field}>
             <span>Canal Preferido</span>
             <select
-              onChange={(event) => updateField("preferredChannel", event.target.value)}
+              onChange={(event) =>
+                updateField(
+                  "preferredChannel",
+                  event.target.value as PatientForm["preferredChannel"]
+                )
+              }
               value={form.preferredChannel}
             >
               <option value="whatsapp">WhatsApp</option>
@@ -118,13 +162,39 @@ export function PatientCreateScreen({ onSubmit, professionals, selectScreen }: P
           <label className={styles.field}>
             <span>Formato Preferencial</span>
             <select
-              onChange={(event) => updateField("preferredResponseFormat", event.target.value)}
+              disabled={form.requiresAudioMessages}
+              onChange={(event) =>
+                updateField(
+                  "preferredResponseFormat",
+                  event.target.value as PatientForm["preferredResponseFormat"]
+                )
+              }
               value={form.preferredResponseFormat}
             >
               <option value="text">Texto</option>
               <option value="buttons">Botoes</option>
               <option value="audio">Audio</option>
             </select>
+          </label>
+          <label className={styles.field}>
+            <span>Acessibilidade de leitura</span>
+            <select
+              onChange={(event) => {
+                const requiresAudioMessages = event.target.value === "audio";
+                setForm((current) => ({
+                  ...current,
+                  requiresAudioMessages,
+                  preferredResponseFormat: requiresAudioMessages ? "audio" : "text"
+                }));
+              }}
+              value={form.requiresAudioMessages ? "audio" : "standard"}
+            >
+              <option value="standard">Paciente alfabetizado</option>
+              <option value="audio">Não alfabetizado — enviar mensagens em áudio</option>
+            </select>
+            <small>
+              Quando ativado, perguntas e mensagens serão narradas automaticamente.
+            </small>
           </label>
           <label className={styles.field}>
             <span>Melhor horario inicial</span>
