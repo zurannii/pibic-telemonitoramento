@@ -199,6 +199,8 @@ Os formatos aceitos pela Groq (`flac`, `mp3`, `mp4`, `mpeg`, `mpga`, `m4a`, `ogg
 
 Depois de uma transcricao bem-sucedida, o paciente recebe uma confirmacao de que o relato foi registrado e encaminhado para a equipe. O painel consulta novos dados automaticamente a cada cinco segundos e restaura a ultima tela e o perfil selecionado depois de recarregar a pagina.
 
+A tela **Relatorios** permite selecionar um paciente, consolidar todas as respostas clinicamente relevantes, visualizar intensidade e evolucao da dor, temas recorrentes, alertas e uma linha do tempo completa. O relatorio pode ser exportado diretamente em PDF e sempre inclui o aviso de revisao por profissional de saude.
+
 ## WhatsApp Cloud API
 
 Na tela **Equipe > Integracao com WhatsApp**, informe:
@@ -342,6 +344,7 @@ Para producao, crie uma rota protegida de processamento e acione-a com Vercel Cr
 | `/api/patients/[patientId]/messages` | `POST` | Envio de pergunta ou mensagem personalizada. |
 | `/api/questions` | `GET`, `POST` | Perguntas de monitoramento. |
 | `/api/questions/[questionId]` | `PATCH`, `DELETE` | Edicao e exclusao de pergunta. |
+| `/api/reports/patients/[patientId]` | `GET` | Resumo e analise descritiva das respostas do paciente. |
 | `/api/alerts/[alertId]` | `PATCH` | Atualizacao ou resolucao de alerta. |
 | `/api/users` | `GET`, `POST` | Equipe profissional. |
 | `/api/users/[userId]` | `PATCH`, `DELETE` | Edicao e exclusao de profissional. |

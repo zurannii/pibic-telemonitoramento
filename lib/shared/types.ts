@@ -228,3 +228,47 @@ export type PatientDetails = {
   messages: MessageLogRecord[];
   alerts: AlertListItem[];
 };
+
+export type PatientReportTimelineItem = {
+  id: string;
+  reportedAt: string;
+  channel: MessagingChannel;
+  type: "text" | "audio";
+  question: string;
+  theme: string;
+  response: string;
+};
+
+export type PatientReport = {
+  generatedAt: string;
+  patient: {
+    id: string;
+    name: string;
+    age: number;
+    condition: string;
+    responsibleName: string | null;
+    status: PatientStatus;
+  };
+  period: {
+    start: string | null;
+    end: string | null;
+  };
+  metrics: {
+    responseCount: number;
+    audioResponseCount: number;
+    averagePain: number | null;
+    maximumPain: number | null;
+    worseningMentions: number;
+    activeAlertCount: number;
+  };
+  narrative: string;
+  analysis: string[];
+  themes: Array<{ name: string; count: number }>;
+  painHistory: Array<{
+    reportedAt: string;
+    level: number;
+    response: string;
+  }>;
+  timeline: PatientReportTimelineItem[];
+  reviewNotice: string;
+};

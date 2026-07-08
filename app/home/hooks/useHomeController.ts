@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 
-import type { BootstrapPayload, PatientDetails, PublicUser } from "@/lib/shared/types";
+import type {
+  BootstrapPayload,
+  PatientDetails,
+  PatientReport,
+  PublicUser
+} from "@/lib/shared/types";
 import type { ToastItem } from "../components/ToastStack";
 import type { PatientProfileTab, QuestionView, ScreenId } from "../types";
 
@@ -563,6 +568,16 @@ export function useHomeController() {
     }, "Mensagem enviada ao paciente.");
   };
 
+  const generatePatientReport = async (patientId: string) => {
+    return withFeedback(
+      () =>
+        apiRequest<PatientReport>(`/api/reports/patients/${patientId}`, {
+          cache: "no-store"
+        }),
+      "Relatorio atualizado."
+    );
+  };
+
   return {
     activePatientProfileTab,
     activeScreen,
@@ -575,6 +590,7 @@ export function useHomeController() {
     confirmDeleteSchedule,
     confirmDeleteUser,
     confirmResolveAlert,
+    generatePatientReport,
     handleAddSchedule,
     handleCreatePatient,
     handleCreateQuestion,

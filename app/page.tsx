@@ -132,7 +132,13 @@ export default function Home() {
           />
         );
       case "reports":
-        return <ReportsScreen dashboard={bootstrap.dashboard} patients={bootstrap.patients} />;
+        return (
+          <ReportsScreen
+            dashboard={bootstrap.dashboard}
+            onGenerateReport={controller.generatePatientReport}
+            patients={bootstrap.patients}
+          />
+        );
       case "team":
         return (
           <TeamScreen
