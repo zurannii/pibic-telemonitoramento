@@ -1,7 +1,7 @@
 "use client";
 
-import styles from "../../page.module.css";
 import { cn } from "../utils";
+import { ui } from "./ui";
 
 export type ToastItem = {
   id: string;
@@ -15,12 +15,9 @@ type ToastStackProps = {
 
 export function ToastStack({ items }: ToastStackProps) {
   return (
-    <div className={styles.toastStack}>
+    <div aria-live="polite" className={ui.toastStack}>
       {items.map((item) => (
-        <article
-          key={item.id}
-          className={cn(styles.toastCard, item.tone === "error" && styles.toastCardError)}
-        >
+        <article key={item.id} className={cn(ui.toast, item.tone === "error" && ui.toastError)} role="status">
           {item.message}
         </article>
       ))}

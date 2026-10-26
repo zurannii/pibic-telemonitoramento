@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import type { jsPDF } from "jspdf";
 
-import styles from "../../page.module.css";
 import type {
   DashboardSummary,
   PatientListItem,
   PatientReport
 } from "@/lib/shared/types";
-import { cn } from "../utils";
+import { cn, displayLabel } from "../utils";
+import { Icon } from "../components/Icon";
+import { Card, EmptyState, Field, Kpi, Note, PageHeader, ui } from "../components/ui";
 
 type ReportsScreenProps = {
   dashboard?: DashboardSummary;
@@ -191,186 +192,244 @@ export function ReportsScreen({
     }
   };
 
-  return (
-    <section className={embeddedPatientId ? undefined : styles.screen}>
-      {!embeddedPatientId && dashboard && (
+  const totalPatients = patients.length;
+  const statusSegments = [
+    { label: "Estável", total: stableCount, color: "var(--green-bar)" },
+    { label: "Atenção", total: attentionCount, color: "var(--amber-bar)" },
+    { label: "Crítico", total: criticalCount, color: "var(--red-bar)" }
+  ];
+  const painPoints = report?.painHistory.slice(-12) ?? [];
+
+  const generator = (
+    <Card
+      actions={
         <>
-          <div className={styles.pageHead}>
-            <div className={styles.pageHeading}>
-              <h1>Relatórios</h1>
-              <p>Consolidação das respostas e evolução relatada por cada paciente.</p>
-            </div>
-          </div>
-
-          <section className={styles.reportCards}>
-            <article className={cn(styles.panel, styles.reportCard)}>
-              <h2>Pacientes ativos</h2>
-              <p>{dashboard.totalPatients} cadastros disponíveis para acompanhamento.</p>
-            </article>
-            <article className={cn(styles.panel, styles.reportCard)}>
-              <h2>Respostas hoje</h2>
-              <p>{dashboard.responsesToday} interações recebidas hoje.</p>
-            </article>
-            <article className={cn(styles.panel, styles.reportCard)}>
-              <h2>Rotinas agendadas</h2>
-              <p>{dashboard.scheduledMessages} rotinas configuradas.</p>
-            </article>
-          </section>
-
-          <section className={cn(styles.panel, styles.reportSummary)}>
-            <div className={styles.summaryGrid}>
-              <article className={styles.summaryCard}>
-                <strong>{stableCount}</strong>
-                <small>Estáveis</small>
-              </article>
-              <article className={styles.summaryCard}>
-                <strong>{attentionCount}</strong>
-                <small>Atenção</small>
-              </article>
-              <article className={styles.summaryCard}>
-                <strong>{criticalCount}</strong>
-                <small>Críticos</small>
-              </article>
-              <article className={styles.summaryCard}>
-                <strong>{dashboard.activeAlerts}</strong>
-                <small>Alertas ativos</small>
-              </article>
-            </div>
-          </section>
-        </>
-      )}
-
-      <section className={styles.profileSectionCard}>
-        <h2>{embeddedPatientId ? "Resumo e análise do acompanhamento" : "Relatório individual"}</h2>
-        {!embeddedPatientId && <div className={styles.profileInfoGrid}>
-          <label className={styles.field}>
-            <span>Paciente</span>
-            <select
-              onChange={(event) => {
-                setSelectedPatientId(event.target.value);
-                setReport(null);
-              }}
-              value={selectedPatientId}
-            >
-              {patients.map((patient) => (
-                <option key={patient.id} value={patient.id}>
-                  {patient.name} - {patient.condition}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>}
-        <div className={styles.formActions}>
           <button
-            className={styles.primaryButton}
-            disabled={!selectedPatientId || loadingReport}
-            onClick={handleGenerateReport}
-            type="button"
-          >
-            {loadingReport ? "Analisando respostas..." : "Gerar resumo e análise"}
-          </button>
-          <button
-            className={styles.ghostButton}
+            className={cn(ui.btn, ui.btnSecondary)}
             disabled={!report || exportingPdf}
             onClick={handleExportPdf}
             type="button"
           >
+            <Icon name="download" />
             {exportingPdf ? "Gerando PDF..." : "Exportar PDF"}
           </button>
-        </div>
-      </section>
+          <button
+            className={cn(ui.btn, ui.btnPrimary)}
+            disabled={!selectedPatientId || loadingReport}
+            onClick={handleGenerateReport}
+            type="button"
+          >
+            <Icon name="idea" />
+            {loadingReport ? "Analisando respostas..." : "Gerar resumo e análise"}
+          </button>
+        </>
+      }
+      icon="text"
+      subtitle={
+        embeddedPatientId
+          ? "Relatório longitudinal com as respostas registradas do paciente"
+          : "Selecione um paciente para gerar o relatório longitudinal"
+      }
+      title={embeddedPatientId ? "Relatório do paciente" : "Relatório individual"}
+    >
+      {!embeddedPatientId ? (
+        <Field label="Paciente">
+          <select
+            onChange={(event) => {
+              setSelectedPatientId(event.target.value);
+              setReport(null);
+            }}
+            value={selectedPatientId}
+          >
+            {patients.map((patient) => (
+              <option key={patient.id} value={patient.id}>
+                {patient.name} — {patient.condition}
+              </option>
+            ))}
+          </select>
+        </Field>
+      ) : null}
+      {!report ? (
+        <Note>Clique em “Gerar resumo e análise” para montar o relatório com as respostas mais recentes.</Note>
+      ) : null}
+    </Card>
+  );
+
+  return (
+    <div className={ui.stack}>
+      {!embeddedPatientId && dashboard && (
+        <>
+          <PageHeader
+            subtitle="Consolidação das respostas e da evolução relatada por cada paciente"
+            title="Relatórios"
+          />
+
+          <section aria-label="Indicadores gerais" className={ui.kpiRow}>
+            <Kpi icon="patients" label="Pacientes ativos" value={dashboard.totalPatients} />
+            <Kpi icon="questions" label="Respostas hoje" value={dashboard.responsesToday} />
+            <Kpi icon="calendar" label="Rotinas agendadas" tone="amber" value={dashboard.scheduledMessages} />
+            <Kpi icon="alerts" label="Alertas ativos" tone="red" value={dashboard.activeAlerts} />
+          </section>
+
+          {totalPatients > 0 ? (
+            <Card icon="reports" subtitle="Distribuição atual dos pacientes acompanhados" title="Distribuição de status">
+              <div aria-hidden="true" className={ui.stackBar}>
+                {statusSegments
+                  .filter((segment) => segment.total > 0)
+                  .map((segment) => (
+                    <span
+                      className={ui.stackSeg}
+                      key={segment.label}
+                      style={{ background: segment.color, flex: segment.total }}
+                    />
+                  ))}
+              </div>
+              <div className={ui.legendList}>
+                {statusSegments.map((segment) => (
+                  <div className={ui.legendRow} key={segment.label}>
+                    <span className={ui.legendDot} style={{ background: segment.color }} />
+                    <span className={ui.legendLabel}>{segment.label}</span>
+                    <span className={ui.legendValue}>{segment.total}</span>
+                    <span className={cn(ui.muted, ui.small)}>
+                      {Math.round((segment.total / totalPatients) * 100)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ) : null}
+        </>
+      )}
+
+      {generator}
 
       {report && (
         <>
-          <section className={styles.profileSectionCard}>
-            <div className={styles.profileCardToolbar}>
-              <div>
-                <h2>{report.patient.name}</h2>
-                <p className={styles.infoText}>
-                  {report.patient.age} anos • {report.patient.condition} • {statusLabel(report.patient.status)}
-                </p>
+          <Card
+            actions={<span className={cn(ui.small, ui.muted)}>Gerado em {formatDate(report.generatedAt)}</span>}
+            icon="user"
+            subtitle={`${report.patient.age} anos · ${report.patient.condition} · ${statusLabel(report.patient.status)}`}
+            title={report.patient.name}
+          >
+            <div className={ui.kpiRow}>
+              <div className={ui.softBox}>
+                <p className={ui.sectionLabel}>Respostas</p>
+                <div className={ui.kpiValue}>{report.metrics.responseCount}</div>
               </div>
-              <small>Atualizado em {formatDate(report.generatedAt)}</small>
+              <div className={ui.softBox}>
+                <p className={ui.sectionLabel}>Áudios</p>
+                <div className={ui.kpiValue}>{report.metrics.audioResponseCount}</div>
+              </div>
+              <div className={ui.softBox}>
+                <p className={ui.sectionLabel}>Dor média</p>
+                <div className={ui.kpiValue}>
+                  {report.metrics.averagePain ?? "—"}
+                  <span className={cn(ui.small, ui.muted)}>/10</span>
+                </div>
+              </div>
+              <div className={ui.softBox}>
+                <p className={ui.sectionLabel}>Alertas ativos</p>
+                <div className={ui.kpiValue}>{report.metrics.activeAlertCount}</div>
+              </div>
             </div>
+            <span className={cn(ui.small, ui.muted)}>
+              Período analisado: {formatDate(report.period.start)} a {formatDate(report.period.end)}
+            </span>
+          </Card>
 
-            <div className={styles.profileReportStats}>
-              <article className={styles.profileReportStat}>
-                <strong>{report.metrics.responseCount}</strong>
-                <span>Respostas</span>
-              </article>
-              <article className={styles.profileReportStat}>
-                <strong>{report.metrics.audioResponseCount}</strong>
-                <span>Áudios</span>
-              </article>
-              <article className={styles.profileReportStat}>
-                <strong>{report.metrics.averagePain ?? "-"}</strong>
-                <span>Dor média /10</span>
-              </article>
-              <article className={styles.profileReportStat}>
-                <strong>{report.metrics.activeAlertCount}</strong>
-                <span>Alertas ativos</span>
-              </article>
-            </div>
-          </section>
+          <div className={ui.row}>
+            <Card icon="idea" title="Resumo narrativo" variant="soft">
+              <Note>Síntese gerada automaticamente — deve ser revisada por um profissional.</Note>
+              <p style={{ lineHeight: 1.6, margin: 0 }}>{report.narrative}</p>
+            </Card>
 
-          <section className={styles.profileSectionCard}>
-            <h2>Resumo narrativo</h2>
-            <div className={styles.profileSoftPanel}>
-              <p>{report.narrative}</p>
-            </div>
-          </section>
+            <Card icon="activity" title="Análise do quadro relatado">
+              {report.analysis.length ? (
+                <ul className={ui.bullets}>
+                  {report.analysis.map((observation) => (
+                    <li key={observation}>{observation}</li>
+                  ))}
+                </ul>
+              ) : (
+                <EmptyState title="Sem observações para o período" />
+              )}
+            </Card>
+          </div>
 
-          <section className={styles.profileSectionCard}>
-            <h2>Análise do quadro relatado</h2>
-            <div className={styles.profileReportList}>
-              {report.analysis.map((observation) => (
-                <article key={observation} className={styles.profileReportListItem}>
-                  <p>{observation}</p>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          {report.painHistory.length > 0 && (
-            <section className={styles.profileSectionCard}>
-              <h2>Evolução da dor</h2>
-              <div className={styles.profileReportList}>
-                {report.painHistory.map((item) => (
-                  <article
-                    key={`${item.reportedAt}-${item.level}`}
-                    className={styles.profileReportListItem}
-                  >
-                    <strong>{item.level}/10</strong>
-                    <p>{item.response}</p>
-                    <small>{formatDate(item.reportedAt)}</small>
-                  </article>
+          {painPoints.length > 0 && (
+            <Card icon="activity" subtitle="Intensidade relatada pelo paciente (escala 0–10)" title="Evolução da dor">
+              <div className={ui.bars}>
+                {painPoints.map((item) => (
+                  <div className={ui.barCol} key={`${item.reportedAt}-${item.level}`} title={item.response}>
+                    <span className={ui.barValue}>{item.level}/10</span>
+                    <span
+                      className={cn(ui.bar, item.level >= 7 ? ui.barRed : item.level >= 4 ? ui.barAmber : ui.barGreen)}
+                      style={{ height: `${Math.max(4, item.level * 10)}%` }}
+                    />
+                    <span className={ui.barLabel}>
+                      {new Date(item.reportedAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                    </span>
+                  </div>
                 ))}
               </div>
-            </section>
+              <div className={ui.tagRow}>
+                <span className={ui.legendRow}>
+                  <span className={ui.legendDot} style={{ background: "var(--red-bar)" }} />
+                  <span className={ui.small}>Intensa (7–10)</span>
+                </span>
+                <span className={ui.legendRow}>
+                  <span className={ui.legendDot} style={{ background: "var(--amber-bar)" }} />
+                  <span className={ui.small}>Moderada (4–6)</span>
+                </span>
+                <span className={ui.legendRow}>
+                  <span className={ui.legendDot} style={{ background: "var(--green-bar)" }} />
+                  <span className={ui.small}>Leve (0–3)</span>
+                </span>
+              </div>
+            </Card>
           )}
 
-          <section className={styles.profileSectionCard}>
-            <h2>Todas as respostas consideradas</h2>
-            <div className={styles.profileResponseCards}>
-              {report.timeline.map((item) => (
-                <article key={item.id} className={styles.profileResponseCard}>
-                  <div className={styles.profileResponseMeta}>
-                    <strong>{item.theme}</strong>
-                    <small>{formatDate(item.reportedAt)} • {item.channel} • {item.type}</small>
-                  </div>
-                  <div className={styles.profileResponseTextBlock}>
-                    <small>{item.question}</small>
-                    <p>{item.response}</p>
-                  </div>
-                </article>
-              ))}
-              {!report.timeline.length && <p>Nenhuma resposta registrada para este paciente.</p>}
-            </div>
-          </section>
+          {report.themes.length > 0 && (
+            <Card icon="questions" title="Temas das respostas">
+              <div className={ui.tagRow}>
+                {report.themes.map((theme) => (
+                  <span className={ui.pill} key={theme.name}>
+                    {theme.name} · {theme.count}
+                  </span>
+                ))}
+              </div>
+            </Card>
+          )}
 
-          <p className={styles.profileReviewNote}>{report.reviewNotice}</p>
+          <Card icon="questions" subtitle={`${report.timeline.length} resposta(s)`} title="Todas as respostas consideradas">
+            {report.timeline.length ? (
+              <div className={ui.list}>
+                {report.timeline.map((item) => (
+                  <div className={ui.listItem} key={item.id} style={{ alignItems: "flex-start" }}>
+                    <div className={ui.messageBody}>
+                      <div className={ui.messageHead}>
+                        <strong>{item.theme}</strong>
+                        <span className={ui.pill}>{displayLabel(item.channel)}</span>
+                        <span className={ui.pill}>{displayLabel(item.type)}</span>
+                        <span className={ui.messageTime}>
+                          <Icon name="clock" />
+                          {formatDate(item.reportedAt)}
+                        </span>
+                      </div>
+                      <span className={ui.listMeta}>Pergunta: {item.question}</span>
+                      <div className={ui.bubble}>{item.response}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="Nenhuma resposta registrada para este paciente" />
+            )}
+          </Card>
+
+          <Note>{report.reviewNotice}</Note>
         </>
       )}
-    </section>
+    </div>
   );
 }

@@ -20,7 +20,6 @@ export type PatientProfileTab =
   | "conduct";
 
 export type IconName =
-  | "brand"
   | "overview"
   | "patients"
   | "alerts"
@@ -37,4 +36,29 @@ export type IconName =
   | "edit"
   | "save"
   | "menu"
-  | "close";
+  | "close"
+  | "plus"
+  | "check"
+  | "chevron-right"
+  | "chevron-down"
+  | "trash"
+  | "send"
+  | "calendar"
+  | "phone"
+  | "user"
+  | "mail"
+  | "shield"
+  | "lock"
+  | "link"
+  | "volume"
+  | "download"
+  | "logout"
+  | "activity"
+  | "warning"
+  | "info"
+  | "text"
+  | "buttons"
+  | "pause"
+  | "play"
+  | "settings"
+  | "brand";

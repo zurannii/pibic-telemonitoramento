@@ -8,6 +8,7 @@ import type {
 } from "../shared/types";
 import { updatePatientStatusFromAlerts } from "./db";
 import {
+  describeTelegramConfigIssue,
   isTelegramConfigured,
   sendTelegramTextMessage,
   sendTelegramVoiceMessage
@@ -101,7 +102,7 @@ export async function sendMessageToPatientChannel(
       channel,
       messageType,
       messageId: null,
-      error: "A integracao com o Telegram esta desativada ou incompleta."
+      error: describeTelegramConfigIssue(telegramSettings)
     };
   }
 

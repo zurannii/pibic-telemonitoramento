@@ -5,7 +5,7 @@ export const navItems: Array<{
   label: string;
   icon: IconName;
 }> = [
-  { id: "overview", label: "Visão Geral", icon: "overview" },
+  { id: "overview", label: "Visão geral", icon: "overview" },
   { id: "patients", label: "Pacientes", icon: "patients" },
   { id: "alerts", label: "Alertas", icon: "alerts" },
   { id: "questions", label: "Perguntas", icon: "questions" },

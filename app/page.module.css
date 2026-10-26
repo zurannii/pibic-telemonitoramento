@@ -3101,3 +3101,1404 @@
     transition: none;
   }
 }
+
+/* Mobile UX refinement */
+.mobileAppIdentity,
+.mobilePatientList,
+.mobileTeamList,
+.sidebarSectionLabel,
+.sidebarAccount {
+  display: none;
+}
+
+@media (max-width: 1040px) {
+  .sidebar,
+  .sidebar.sidebarDesktopHidden {
+    border-radius: 0 20px 20px 0;
+    padding:
+      max(20px, env(safe-area-inset-top))
+      18px
+      max(20px, env(safe-area-inset-bottom));
+    width: min(88vw, 340px);
+  }
+
+  .sidebarHeader {
+    margin-bottom: 24px;
+  }
+
+  .brandMark span {
+    font-size: 0.9375rem;
+  }
+
+  .sidebarSectionLabel {
+    color: var(--text-muted);
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    margin: 0 12px 8px;
+    text-transform: uppercase;
+  }
+
+  .sidebarNav {
+    gap: 6px;
+  }
+
+  .navLink {
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    min-height: 48px;
+    padding: 0 14px;
+  }
+
+  .navLinkActive {
+    box-shadow: 0 8px 20px rgba(58, 79, 252, 0.18);
+  }
+
+  .sidebarAccount {
+    border-top: 1px solid var(--border);
+    display: grid;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 16px;
+  }
+
+  .sidebarAccountIdentity {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .sidebarAccountIdentity > div {
+    display: grid;
+    min-width: 0;
+  }
+
+  .sidebarAccountIdentity strong,
+  .sidebarAccountIdentity small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sidebarAccountIdentity strong {
+    color: var(--text);
+    font-size: 0.875rem;
+  }
+
+  .sidebarAccountIdentity small {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+  }
+
+  .sidebarLogoutButton {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--text-soft);
+    min-height: 44px;
+    width: 100%;
+  }
+
+  .sidebarLogoutButton:hover {
+    background: #fff1f2;
+    border-color: #fecdd3;
+    color: #be123c;
+  }
+
+  .mobileNavOverlay {
+    backdrop-filter: blur(3px);
+  }
+
+  .topbar {
+    min-height: 64px;
+    padding:
+      max(10px, env(safe-area-inset-top))
+      max(16px, env(safe-area-inset-right))
+      10px
+      max(16px, env(safe-area-inset-left));
+  }
+
+  .topbarStart {
+    gap: 12px;
+  }
+
+  .mobileAppIdentity {
+    align-items: center;
+    color: var(--primary);
+    display: flex;
+    gap: 9px;
+    min-width: 0;
+  }
+
+  .mobileAppIdentity svg {
+    flex: 0 0 30px;
+    height: 30px;
+    width: 30px;
+  }
+
+  .mobileAppIdentity span {
+    color: var(--text);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar .search,
+  .topbar > .userChip {
+    display: none;
+  }
+}
+
+@media (max-width: 780px) {
+  .dashboard {
+    background: #f6f8fc;
+  }
+
+  .screenStack {
+    padding:
+      18px
+      max(16px, env(safe-area-inset-right))
+      max(28px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
+  }
+
+  .screen {
+    gap: 18px;
+  }
+
+  .pageHeading h1,
+  .profileIdentity h1 {
+    font-size: clamp(1.625rem, 7vw, 2rem);
+    letter-spacing: -0.035em;
+    line-height: 1.1;
+  }
+
+  .pageHeading p {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    margin-top: 7px;
+  }
+
+  .pageHead > .primaryButton {
+    font-size: 0.875rem;
+    min-height: 46px;
+  }
+
+  .compactPanel {
+    border-radius: 12px;
+    padding: 10px;
+  }
+
+  .toolbarSearch {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    gap: 8px;
+    padding-left: 12px;
+  }
+
+  .toolbarSearch input {
+    border: 0;
+    box-shadow: none;
+    min-height: 46px;
+    padding-left: 0;
+  }
+
+  .toolbarSearch input:focus {
+    box-shadow: none;
+  }
+
+  .statsGrid,
+  .summaryGrid,
+  .summaryGridAlerts,
+  .profileReportStats {
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .statCard,
+  .summaryCard {
+    border-radius: 12px;
+    min-height: 106px;
+    padding: 14px;
+  }
+
+  .statCard strong,
+  .summaryCard strong {
+    font-size: 1.625rem;
+  }
+
+  .contentGrid,
+  .reportGrid,
+  .reportCards,
+  .profileSplitGrid,
+  .profileFeatureGrid,
+  .profileTeamGrid,
+  .profileInfoGrid,
+  .profilePlanMeta {
+    gap: 14px;
+  }
+
+  .panel,
+  .questionComposerCard,
+  .questionCard,
+  .profileSectionCard,
+  .profileHeaderCard {
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.055);
+  }
+
+  .profileWorkspace {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .profileTabs {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+    position: sticky;
+    top: 74px;
+    z-index: 20;
+  }
+
+  .profileWorkspaceBody {
+    padding: 14px 0 0;
+  }
+
+  .questionTabs {
+    background: #ffffff;
+  }
+
+  .field input,
+  .field select,
+  .field textarea {
+    font-size: 1rem;
+  }
+
+  .primaryButton,
+  .ghostButton,
+  .tableButton,
+  .filterButton,
+  .segment,
+  .profileFilterChip,
+  .profilePeriodButton {
+    min-height: 44px;
+  }
+
+  .desktopPatientTable,
+  .desktopTeamTable {
+    display: none;
+  }
+
+  .mobilePatientList,
+  .mobileTeamList {
+    display: grid;
+    gap: 12px;
+  }
+
+  .mobilePatientCard,
+  .mobileTeamCard,
+  .mobileEmptyState {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.055);
+  }
+
+  .mobilePatientCard,
+  .mobileTeamCard {
+    display: grid;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .mobilePatientHeader,
+  .mobileTeamCard > header {
+    align-items: flex-start;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+  }
+
+  .mobilePatientAvatar {
+    align-items: center;
+    background: var(--primary-soft);
+    border-radius: 12px;
+    color: var(--primary);
+    display: inline-flex;
+    font-size: 1rem;
+    font-weight: 800;
+    height: 44px;
+    justify-content: center;
+    width: 44px;
+  }
+
+  .mobilePatientIdentity,
+  .mobileTeamCard > header > div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .mobilePatientIdentity strong,
+  .mobileTeamCard > header strong {
+    color: var(--text);
+    font-size: 1rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .mobilePatientIdentity span,
+  .mobileTeamCard > header span:not(.badge) {
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
+  .mobilePatientDetails {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+  }
+
+  .mobilePatientDetails > div {
+    background: #f8f9fd;
+    border-radius: 9px;
+    display: grid;
+    gap: 3px;
+    padding: 10px 12px;
+  }
+
+  .mobilePatientDetails dt {
+    color: var(--text-muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .mobilePatientDetails dd {
+    color: var(--text-body);
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .mobilePatientDetailWide {
+    grid-column: 1 / -1;
+  }
+
+  .mobilePatientActions {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .mobilePrimaryAction,
+  .mobileDangerAction {
+    border-radius: 9px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    min-height: 44px;
+    padding: 0 16px;
+  }
+
+  .mobilePrimaryAction {
+    background: var(--primary);
+    border: 1px solid var(--primary);
+    color: #ffffff;
+  }
+
+  .mobileDangerAction {
+    background: #ffffff;
+    border: 1px solid #fecdd3;
+    color: #be123c;
+  }
+
+  .mobileEmptyState {
+    align-items: center;
+    color: var(--text-muted);
+    display: grid;
+    gap: 6px;
+    justify-items: center;
+    padding: 30px 20px;
+    text-align: center;
+  }
+
+  .mobileEmptyState svg {
+    height: 24px;
+    width: 24px;
+  }
+
+  .mobileEmptyState strong {
+    color: var(--text-body);
+  }
+
+  .mobileEmptyState span,
+  .mobileListCount {
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+  }
+
+  .mobileListCount {
+    padding: 2px 4px;
+    text-align: center;
+  }
+
+  .mobileTeamList > h2 {
+    color: var(--text);
+    font-size: 1.125rem;
+    margin: 4px 0 0;
+  }
+
+  .mobileTeamMeta {
+    background: #f8f9fd;
+    border-radius: 9px;
+    color: var(--text-soft);
+    display: grid;
+    font-size: 0.8125rem;
+    gap: 4px;
+    overflow-wrap: anywhere;
+    padding: 10px 12px;
+  }
+
+  .mobileTeamCard > .mobileDangerAction {
+    width: 100%;
+  }
+
+  .mobileCurrentUser {
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    text-align: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .screenStack {
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+
+  .statsGrid,
+  .summaryGrid,
+  .summaryGridAlerts,
+  .profileReportStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mobilePatientHeader,
+  .mobileTeamCard > header {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .mobilePatientHeader > .badge,
+  .mobileTeamCard > header > .badge {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .mobilePatientAvatar {
+    border-radius: 10px;
+    height: 40px;
+    width: 40px;
+  }
+
+  .mobilePatientDetails {
+    grid-template-columns: 1fr;
+  }
+
+  .mobilePatientDetailWide {
+    grid-column: auto;
+  }
+}
+
+/* ==========================================================================
+   REDESIGN — camada visual (out/2026)
+   Apenas aparência: cores, tipografia, espaçamentos, bordas e estados.
+   Nenhuma regra abaixo altera comportamento ou lógica das telas.
+   Paleta derivada da apresentação: azul elétrico + navy, conteúdo claro.
+   ========================================================================== */
+
+:root {
+  --primary: #2f5bff;
+  --primary-hover: #1636d8;
+  --primary-soft: #e9eeff;
+  --primary-soft-strong: #c7d4ff;
+  --navy: #0b1530;
+  --navy-soft: #16224a;
+  --panel: #ffffff;
+  --panel-soft: #f7f9fc;
+  --page: #f3f5fa;
+  --border: #e4e7ef;
+  --border-soft: #eef1f6;
+  --border-input: #d0d5dd;
+  --text: #0b1324;
+  --text-body: #1d2939;
+  --text-soft: #475467;
+  --text-muted: #667085;
+  --danger: #b42318;
+  --danger-soft: #fee4e2;
+  --warning: #b54708;
+  --warning-soft: #fef0c7;
+  --success: #067647;
+  --success-soft: #dcfae6;
+  --neutral: #344054;
+  --neutral-soft: #eaecf0;
+  --sidebar-active: var(--primary);
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-raised: 0 12px 32px rgba(11, 21, 48, 0.12);
+  --radius: 12px;
+  --radius-card: 16px;
+}
+
+/* ---------- base ---------- */
+.appShell,
+.appShellSingle,
+.dashboard {
+  background: var(--page);
+}
+
+.screenStack {
+  color: var(--text-body);
+}
+
+.screen h1,
+.pageHeading h1 {
+  color: var(--text);
+  font-size: clamp(1.5rem, 1.25rem + 0.8vw, 1.875rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.pageHeading p {
+  color: var(--text-soft);
+  font-size: 0.9375rem;
+}
+
+.panel h2,
+.screen h2 {
+  color: var(--text);
+  font-size: 1.125rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.infoText,
+.inlineMuted {
+  color: var(--text-soft);
+}
+
+/* ---------- superfícies ---------- */
+.authCard,
+.modalCard,
+.toastCard,
+.panel,
+.statCard,
+.summaryCard,
+.reportCard,
+.reportBlock,
+.questionComposerCard,
+.questionCard,
+.profileHeaderCard,
+.profileWorkspace,
+.profileSectionCard,
+.profileMetricCard,
+.profileResponseCard,
+.profileTeamCard,
+.profilePlanCard,
+.profileAlertCard,
+.profileRecentResponseCard,
+.mobilePatientCard,
+.mobileTeamCard {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+}
+
+/* ---------- sidebar (cor sólida) ---------- */
+.sidebar,
+.sidebar.sidebarDesktopHidden {
+  background: var(--navy);
+  border-right: 0;
+  box-shadow: none;
+  color: #ffffff;
+}
+
+.brandMark {
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.brandIcon {
+  color: #9db8ff;
+}
+
+.brandSubtitle {
+  color: rgba(255, 255, 255, 0.6);
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+
+.sidebarSectionLabel {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.navLink {
+  background: transparent;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: none;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  min-height: 46px;
+}
+
+.navLink:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #ffffff;
+}
+
+.navLink:focus-visible,
+.mobileCloseButton:focus-visible,
+.sidebarLogoutButton:focus-visible {
+  outline: 2px solid #9db8ff;
+  outline-offset: 2px;
+}
+
+.navLinkActive,
+.navLinkActive:hover {
+  background: var(--primary);
+  box-shadow: none;
+  color: #ffffff;
+  font-weight: 650;
+}
+
+.navIcon,
+.navLink svg {
+  color: inherit;
+}
+
+.sidebarAccount {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  color: #ffffff;
+}
+
+.sidebarAccountIdentity strong {
+  color: #ffffff;
+}
+
+.sidebarAccountIdentity small {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.sidebarLogoutButton {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  color: #ffffff;
+  font-weight: 600;
+  min-height: 40px;
+}
+
+.sidebarLogoutButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mobileCloseButton {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+.mobileNavOverlay {
+  background: rgba(11, 21, 48, 0.5);
+}
+
+/* ---------- avatar com iniciais ---------- */
+.avatar {
+  align-items: center;
+  background: var(--primary);
+  color: #ffffff;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  justify-content: center;
+  letter-spacing: 0.02em;
+}
+
+.sidebarAccount .avatar {
+  background: rgba(157, 184, 255, 0.2);
+  color: #ffffff;
+}
+
+/* ---------- topbar ---------- */
+.topbar {
+  background: #ffffff;
+  border-bottom: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.search input {
+  background-color: var(--page);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23667085' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");
+  background-position: 14px center;
+  background-repeat: no-repeat;
+  border-color: var(--border);
+  border-radius: 10px;
+  padding-left: 42px;
+}
+
+.userChip {
+  color: var(--text);
+}
+
+.userName {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.mobileMenuButton {
+  border-color: var(--border);
+  border-radius: 10px;
+  color: var(--text);
+}
+
+.mobileAppIdentity {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.mobileAppIdentity svg {
+  color: var(--primary);
+}
+
+/* ---------- botões ---------- */
+.primaryButton {
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  box-shadow: none;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  min-height: 44px;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  transform: none;
+}
+
+.primaryButton:disabled {
+  background: #98a2b3;
+  border-color: #98a2b3;
+  cursor: not-allowed;
+}
+
+.ghostButton {
+  background: #ffffff;
+  border: 1px solid var(--border-input);
+  border-radius: 10px;
+  box-shadow: none;
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  min-height: 44px;
+}
+
+.ghostButton:hover {
+  background: var(--panel-soft);
+  border-color: #98a2b3;
+}
+
+.tableButton {
+  background: #ffffff;
+  border: 1px solid var(--border-input);
+  border-radius: 10px;
+  box-shadow: none;
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  min-height: 36px;
+}
+
+.tableButton:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary-soft-strong);
+  color: var(--primary-hover);
+}
+
+.primaryButton:focus-visible,
+.ghostButton:focus-visible,
+.tableButton:focus-visible,
+.segment:focus-visible,
+.questionTab:focus-visible,
+.profileTab:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.mobileDangerAction {
+  color: var(--danger);
+}
+
+/* ---------- campos ---------- */
+.field > span {
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.field small {
+  color: var(--text-muted);
+}
+
+/* ---------- badges / status (sempre texto + marcador) ---------- */
+.badge {
+  align-items: center;
+  background: var(--primary-soft);
+  border: 0;
+  border-radius: 999px;
+  color: var(--primary-hover);
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 650;
+  gap: 6px;
+  letter-spacing: 0;
+  line-height: 1.2;
+  padding: 5px 10px;
+  text-transform: none;
+}
+
+.badge::before {
+  background: currentColor;
+  border-radius: 999px;
+  content: "";
+  flex: 0 0 auto;
+  height: 6px;
+  width: 6px;
+}
+
+.badgeAlert {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.badgeWarn {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.badgeSafe {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.badgeNeutral {
+  background: var(--neutral-soft);
+  color: var(--neutral);
+}
+
+.badgeSoft {
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+}
+
+.statusDot,
+.priorityDot {
+  background: #d92d20;
+  box-shadow: 0 0 0 4px rgba(217, 45, 32, 0.12);
+}
+
+.statusDotSoft,
+.priorityDotSoft {
+  background: #f79009;
+  box-shadow: 0 0 0 4px rgba(247, 144, 9, 0.14);
+}
+
+.statusDotMuted,
+.priorityDotMuted {
+  background: #98a2b3;
+  box-shadow: 0 0 0 4px rgba(152, 162, 179, 0.18);
+}
+
+/* ---------- visão geral ---------- */
+.statCard {
+  gap: 6px;
+  padding: 20px;
+}
+
+.statCard strong {
+  color: var(--text);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.statCard span {
+  color: var(--text-soft);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.statIcon {
+  background: var(--primary-soft);
+  border-radius: 12px;
+  color: var(--primary-hover);
+  height: 44px;
+  width: 44px;
+}
+
+.statIcon svg {
+  height: 22px;
+  width: 22px;
+}
+
+.statIconMid {
+  background: var(--neutral-soft);
+  color: var(--neutral);
+}
+
+.statIconDark {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.alertItem,
+.priorityItem {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.alertItem:hover,
+.priorityItem:hover {
+  border-color: var(--primary-soft-strong);
+}
+
+.itemCopy strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.itemCopy span,
+.itemCopy time {
+  color: var(--text-soft);
+}
+
+.itemCopy time {
+  font-size: 0.8125rem;
+}
+
+.score {
+  background: var(--danger-soft);
+  border-radius: 999px;
+  color: var(--danger);
+  font-size: 0.75rem;
+  font-weight: 650;
+  padding: 5px 10px;
+}
+
+/* ---------- cards de resumo ---------- */
+.summaryCard strong {
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.summaryCard small,
+.summaryCard span {
+  color: var(--text-soft);
+}
+
+.summaryGridAlerts .summaryCard:nth-child(1) {
+  border-top: 3px solid #d92d20;
+}
+
+.summaryGridAlerts .summaryCard:nth-child(2) {
+  border-top: 3px solid #f79009;
+}
+
+.summaryGridAlerts .summaryCard:nth-child(3) {
+  border-top: 3px solid var(--primary);
+}
+
+.summaryGridAlerts .summaryCard:nth-child(4) {
+  border-top: 3px solid #12b76a;
+}
+
+/* ---------- alertas ---------- */
+.alertRecord {
+  border-left: 4px solid #f79009;
+}
+
+.alertRecordHead h2 {
+  font-size: 1.0625rem;
+}
+
+.alertRecordHead p {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.alertMeta {
+  color: var(--text-soft);
+}
+
+/* ---------- tabelas ---------- */
+.dataTable th {
+  background: #f8f9fc;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dataTable td {
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-body);
+}
+
+.dataTable tbody tr:hover td {
+  background: #f9fafe;
+}
+
+.tableFooter {
+  color: var(--text-soft);
+}
+
+.toolbarSearch input {
+  background-color: var(--page);
+  border-color: var(--border);
+}
+
+.toolbarIcon {
+  color: var(--text-muted);
+}
+
+/* ---------- controles segmentados e abas ---------- */
+.segmentedControl {
+  background: #eef1f7;
+  border: 0;
+  border-radius: 12px;
+  display: grid;
+  gap: 4px;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  padding: 4px;
+}
+
+.segment {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  box-shadow: none;
+  color: var(--text-soft);
+  font-size: 0.875rem;
+  font-weight: 600;
+  min-height: 40px;
+}
+
+.segmentActive {
+  background: #ffffff;
+  border-color: var(--border);
+  color: var(--primary-hover);
+}
+
+.questionTabs,
+.profileTabs {
+  border-bottom: 1px solid var(--border);
+}
+
+.questionTab,
+.profileTab {
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--text-soft);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  min-height: 48px;
+}
+
+.questionTab:hover,
+.profileTab:hover {
+  color: var(--text);
+}
+
+.questionTabActive,
+.profileTabActive {
+  border-bottom-color: var(--primary);
+  color: var(--primary-hover);
+  font-weight: 700;
+}
+
+/* ---------- perguntas ---------- */
+.questionCard {
+  border-left: 4px solid var(--primary);
+}
+
+.questionNote {
+  background: var(--panel-soft);
+  border-radius: 10px;
+  color: var(--text-soft);
+}
+
+/* ---------- perfil do paciente ---------- */
+.profileBackButton {
+  color: var(--primary-hover);
+  font-weight: 600;
+}
+
+.profileAvatar {
+  align-items: center;
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+  display: inline-flex;
+  font-weight: 700;
+  justify-content: center;
+}
+
+.profileIdentity h1 {
+  letter-spacing: -0.02em;
+}
+
+.profileSummaryAiCard {
+  background: #f7f9ff;
+  border: 1px solid var(--primary-soft-strong);
+  border-radius: var(--radius-card);
+}
+
+.profileSummaryAiIcon,
+.profileResponseHeaderIcon,
+.profileResponseRecordIcon {
+  background: var(--primary-soft);
+  border-radius: 10px;
+  color: var(--primary-hover);
+}
+
+.profileMetricCard strong {
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.profileMetricCard span,
+.profileMetricCard small {
+  color: var(--text-soft);
+}
+
+.profileResponseTextBlock,
+.profileSoftPanel,
+.profileReviewNote {
+  background: var(--panel-soft);
+  border-color: var(--border);
+  border-radius: 12px;
+}
+
+.profileRecentResponseLine,
+.profileAlertLine {
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+.profileAlertCard {
+  border-left: 4px solid #f79009;
+}
+
+.profileTextBadge,
+.profileResponseTypeBadge {
+  background: var(--neutral-soft);
+  border-radius: 999px;
+  color: var(--neutral);
+  font-weight: 600;
+}
+
+.profilePlanCard {
+  border-left: 4px solid var(--primary);
+}
+
+/* ---------- relatórios ---------- */
+.reportCard {
+  border-top: 3px solid var(--primary);
+}
+
+.profileReportStat strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* ---------- equipe ---------- */
+.infoRow {
+  border-color: var(--border-soft);
+}
+
+.webhookPanel {
+  background: var(--panel-soft);
+  border-color: var(--border);
+  border-radius: 12px;
+}
+
+/* ---------- autenticação ---------- */
+.authShell,
+.loadingScreen {
+  background: var(--page);
+  color: var(--text-body);
+}
+
+.authHero {
+  background: var(--navy);
+  border: 0;
+  border-radius: 20px;
+  box-shadow: var(--shadow-raised);
+  color: #ffffff;
+  padding: 40px;
+}
+
+.authHero h1 {
+  color: #ffffff;
+  font-size: clamp(1.75rem, 1.4rem + 1vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.authHero p {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.authEyebrow {
+  color: #9db8ff;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.authTip {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  color: #ffffff;
+}
+
+.authTip strong {
+  color: #ffffff;
+}
+
+.authTip span {
+  color: rgba(255, 255, 255, 0.8);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 0.875rem;
+}
+
+.authCard {
+  border-radius: 20px;
+  padding: 32px;
+}
+
+/* ---------- modais e toasts ---------- */
+.modalBackdrop {
+  background: rgba(11, 21, 48, 0.55);
+}
+
+.modalCard {
+  border-radius: 20px;
+  box-shadow: var(--shadow-raised);
+}
+
+.toastCard {
+  border-left: 4px solid var(--primary);
+  border-radius: 12px;
+  box-shadow: var(--shadow-raised);
+}
+
+.toastCardError {
+  border-left-color: var(--danger);
+}
+
+/* ---------- mobile cards ---------- */
+.mobilePatientAvatar {
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+}
+
+.mobilePrimaryAction {
+  background: var(--primary);
+  border-radius: 10px;
+  color: #ffffff;
+}
+
+.brandMark span {
+  color: #ffffff;
+  font-size: 0.9375rem;
+  line-height: 1.25;
+  overflow: visible;
+  white-space: normal;
+}
+
+.search {
+  max-width: 440px;
+}
+
+.backLink {
+  align-items: center;
+  color: var(--primary-hover);
+  display: inline-flex;
+  font-weight: 600;
+  gap: 6px;
+}
+
+.profileAvatar {
+  font-size: 1.25rem;
+}
+
+.profileTeamCard .profileAvatar {
+  font-size: 1rem;
+}
+
+.profileCareTeam span {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.profileCareTeam strong {
+  color: var(--text);
+}
+
+.profileCareTeam small {
+  color: var(--text-soft);
+}

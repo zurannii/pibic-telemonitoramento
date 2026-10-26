@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import styles from "../../page.module.css";
 import { cn } from "../utils";
+import { Icon } from "./Icon";
+import { Field, ui } from "./ui";
 
 type AuthPanelProps = {
   busy: boolean;
@@ -44,84 +45,90 @@ export function AuthPanel({ busy, onLogin, onRegister }: AuthPanelProps) {
   };
 
   return (
-    <main className={styles.authShell}>
-      <section className={styles.authPanel}>
-        <div className={styles.authHero}>
-          <span className={styles.authEyebrow}>Telemonitoramento com WhatsApp</span>
-          <h1>Ambiente pronto para teste com equipe, pacientes e automações.</h1>
+    <main className={cn(ui.root, ui.auth)}>
+      <section className={ui.authPanel}>
+        <div className={ui.authHero}>
+          <Icon name="brand" className={ui.brandLogo} />
+          <span className={ui.authEyebrow}>Telemonitoramento · Fibromialgia e doenças crônicas</span>
+          <h1>Acompanhamento remoto de pacientes, com a equipe no mesmo lugar.</h1>
           <p>
-            Você pode entrar com a conta demo ou criar um profissional novo e já começar
-            os testes reais do fluxo.
+            Entre com a conta demo ou crie um acesso de profissional para começar a usar o
+            fluxo de acompanhamento.
           </p>
-          <div className={styles.authTip}>
+          <div className={ui.authTip}>
             <strong>Conta demo</strong>
-            <span>`demo@telemonitor.com`</span>
-            <span>`demo123`</span>
+            <code>demo@telemonitor.com</code>
+            <code>demo123</code>
           </div>
         </div>
 
-        <section className={styles.authCard}>
-          <div className={styles.segmentedControl}>
+        <section className={ui.authCard}>
+          <div className={ui.segmented} role="tablist" aria-label="Tipo de acesso">
             <button
-              className={cn(styles.segment, mode === "login" && styles.segmentActive)}
+              aria-selected={mode === "login"}
+              className={cn(ui.segment, mode === "login" && ui.segmentActive)}
               onClick={() => setMode("login")}
+              role="tab"
               type="button"
             >
               Entrar
             </button>
             <button
-              className={cn(styles.segment, mode === "register" && styles.segmentActive)}
+              aria-selected={mode === "register"}
+              className={cn(ui.segment, mode === "register" && ui.segmentActive)}
               onClick={() => setMode("register")}
+              role="tab"
               type="button"
             >
               Criar acesso
             </button>
           </div>
 
-          <div className={styles.formPanel}>
+          <div className={ui.stackSm}>
             {mode === "register" && (
               <>
-                <label className={styles.field}>
-                  <span>Nome</span>
+                <Field label="Nome">
                   <input
                     onChange={(event) => updateField("name", event.target.value)}
                     placeholder="Seu nome"
                     value={form.name}
                   />
-                </label>
-                <label className={styles.field}>
-                  <span>Especialidade</span>
+                </Field>
+                <Field label="Especialidade">
                   <input
                     onChange={(event) => updateField("specialty", event.target.value)}
-                    placeholder="Ex: Fisioterapia"
+                    placeholder="Ex.: Fisioterapia"
                     value={form.specialty}
                   />
-                </label>
+                </Field>
               </>
             )}
 
-            <label className={styles.field}>
-              <span>Email</span>
+            <Field label="E-mail">
               <input
                 onChange={(event) => updateField("email", event.target.value)}
                 placeholder="voce@clinica.com"
                 type="email"
                 value={form.email}
               />
-            </label>
+            </Field>
 
-            <label className={styles.field}>
-              <span>Senha</span>
+            <Field label="Senha">
               <input
                 onChange={(event) => updateField("password", event.target.value)}
                 placeholder="Digite sua senha"
                 type="password"
                 value={form.password}
               />
-            </label>
+            </Field>
           </div>
 
-          <button className={styles.primaryButton} disabled={busy} onClick={handleSubmit} type="button">
+          <button
+            className={cn(ui.btn, ui.btnPrimary, ui.btnBlock)}
+            disabled={busy}
+            onClick={handleSubmit}
+            type="button"
+          >
             {busy ? "Aguarde..." : mode === "login" ? "Entrar na plataforma" : "Criar usuário"}
           </button>
         </section>

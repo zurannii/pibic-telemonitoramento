@@ -13,9 +13,10 @@ body {
 }
 
 body {
-  background: #f7f8fc;
-  color: #1e293b;
+  background: #f3f5fa;
+  color: #1d2939;
   font-family:
+    var(--font-sans),
     "Aptos",
     "Segoe UI",
     "Helvetica Neue",
@@ -38,9 +39,9 @@ input:not([type="radio"]):not([type="checkbox"]),
 select,
 textarea {
   background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  color: #1e293b;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  color: #1d2939;
   min-height: 44px;
   outline: none;
   padding: 11px 14px;
@@ -59,13 +60,13 @@ textarea {
 input:not([type="radio"]):not([type="checkbox"]):focus,
 select:focus,
 textarea:focus {
-  border-color: #3a4ffc;
-  box-shadow: 0 0 0 3px rgba(58, 79, 252, 0.14);
+  border-color: #2f5bff;
+  box-shadow: 0 0 0 3px rgba(47, 91, 255, 0.16);
 }
 
 input[type="radio"],
 input[type="checkbox"] {
-  accent-color: #3a4ffc;
+  accent-color: #2f5bff;
   min-height: auto;
   width: auto;
 }

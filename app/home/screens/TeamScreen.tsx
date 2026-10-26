@@ -1,10 +1,31 @@
 "use client";
 
 import { useState } from "react";
-import styles from "../../page.module.css";
 import type { PatientListItem, PublicUser } from "@/lib/shared/types";
-import { badgeTone, cn } from "../utils";
+import { cn } from "../utils";
 import { Icon } from "../components/Icon";
+import { Avatar, Card, Field, IconChip, Kpi, Note, PageHeader, Tag, roleLabel, ui } from "../components/ui";
+
+const ROLE_DESCRIPTIONS = [
+  {
+    id: "admin",
+    icon: "shield" as const,
+    access: "Coordenação",
+    description: "Pensado para quem coordena a equipe, os pacientes e as integrações."
+  },
+  {
+    id: "professional",
+    icon: "user" as const,
+    access: "Acompanhamento",
+    description: "Pensado para quem acompanha pacientes, envia mensagens e trata alertas."
+  },
+  {
+    id: "viewer",
+    icon: "eye" as const,
+    access: "Consulta",
+    description: "Pensado para quem apenas consulta dados e indicadores."
+  }
+];
 
 type TeamScreenProps = {
   currentUser: PublicUser;
@@ -119,256 +140,326 @@ export function TeamScreen({
     }
   };
 
-  return (
-    <section className={styles.screen}>
-      <div className={styles.pageHead}>
-        <div className={styles.pageHeading}>
-          <h1>Configuracoes da Equipe</h1>
-          <p>Gerencie profissionais e as integracoes de WhatsApp e Telegram no mesmo fluxo.</p>
-        </div>
-      </div>
+  const scrollToForm = () => {
+    document.getElementById("add-professional")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
-      <section className={styles.summaryGrid}>
-        <article className={styles.summaryCard}>
-          <strong>{users.length}</strong>
-          <small>Total de Profissionais</small>
-        </article>
-        <article className={styles.summaryCard}>
-          <strong>{patients.length}</strong>
-          <small>Pacientes Ativos</small>
-        </article>
-        <article className={styles.summaryCard}>
-          <strong>{whatsappInfo.enabled ? "On" : "Off"}</strong>
-          <small>WhatsApp</small>
-        </article>
-        <article className={styles.summaryCard}>
-          <strong>{telegramInfo.enabled ? "On" : "Off"}</strong>
-          <small>Telegram</small>
-        </article>
+  return (
+    <>
+      <PageHeader
+        actions={
+          <button className={cn(ui.btn, ui.btnPrimary)} onClick={scrollToForm} type="button">
+            <Icon name="plus" />
+            Adicionar profissional
+          </button>
+        }
+        subtitle="Gerencie os profissionais, as permissões e as integrações de mensagens"
+        title="Equipe"
+      />
+
+      <section aria-label="Resumo da equipe" className={ui.kpiRow}>
+        <Kpi icon="patients" inline label="Profissionais" value={users.length} />
+        <Kpi icon="user" inline label="Pacientes ativos" value={patients.length} />
+        <Kpi
+          icon="send"
+          inline
+          label="Telegram"
+          tone={telegramInfo.enabled ? "green" : "gray"}
+          value={telegramInfo.enabled ? "Ativo" : "Inativo"}
+        />
+        <Kpi
+          icon="phone"
+          inline
+          label="WhatsApp"
+          tone={whatsappInfo.enabled ? "green" : "gray"}
+          value={whatsappInfo.enabled ? "Ativo" : "Inativo"}
+        />
       </section>
 
-      <div className={styles.contentGrid}>
-        <section className={cn(styles.panel, styles.formPanel)}>
-          <h2>Adicionar Profissional</h2>
-          <div className={styles.formGrid}>
-            <label className={styles.field}>
-              <span>Nome</span>
-              <input
-                onChange={(event) => setUserForm((current) => ({ ...current, name: event.target.value }))}
-                value={userForm.name}
-              />
-            </label>
-            <label className={styles.field}>
-              <span>Email</span>
-              <input
-                onChange={(event) => setUserForm((current) => ({ ...current, email: event.target.value }))}
-                value={userForm.email}
-              />
-            </label>
-            <label className={styles.field}>
-              <span>Especialidade</span>
-              <input
-                onChange={(event) => setUserForm((current) => ({ ...current, specialty: event.target.value }))}
-                value={userForm.specialty}
-              />
-            </label>
-            <label className={styles.field}>
-              <span>Perfil</span>
-              <select
-                onChange={(event) => setUserForm((current) => ({ ...current, role: event.target.value }))}
-                value={userForm.role}
-              >
-                <option value="professional">Profissional</option>
-                <option value="viewer">Visualizador</option>
-                <option value="admin">Administrador</option>
-              </select>
-            </label>
-          </div>
-          <button className={styles.primaryButton} disabled={busyUser} onClick={saveUser} type="button">
-            {busyUser ? "Salvando..." : "Adicionar profissional"}
-          </button>
-        </section>
+      <Card className={ui.onlyDesktop} variant="flush">
+        <div className={ui.tableWrap}>
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th>Profissional</th>
+                <th>Especialidade</th>
+                <th>Função</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((user) => (
+                <tr key={user.id}>
+                  <td>
+                    <div className={ui.cellUser}>
+                      <Avatar name={user.name} size="sm" />
+                      <div>
+                        <strong>{user.name}</strong>
+                        <small>{user.email}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{user.specialty || "Não informada"}</td>
+                  <td>
+                    <Tag icon={user.role === "admin" ? "shield" : user.role === "viewer" ? "eye" : "user"} tone={user.role === "admin" ? "info" : "neutral"}>
+                      {roleLabel[user.role] ?? user.role}
+                    </Tag>
+                  </td>
+                  <td>
+                    <Tag icon="check" tone="success">
+                      Ativo
+                    </Tag>
+                  </td>
+                  <td>
+                    {user.id !== currentUser.id ? (
+                      <button
+                        className={cn(ui.btn, ui.btnDanger, ui.btnSm)}
+                        onClick={() => onDeleteUser(user.id)}
+                        type="button"
+                      >
+                        <Icon name="trash" />
+                        Excluir
+                      </button>
+                    ) : (
+                      <span className={cn(ui.small, ui.muted)}>Você</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
-        <section className={cn(styles.panel, styles.formPanel)}>
-          <h2>Integracao com WhatsApp</h2>
-          <p className={styles.infoText}>
-            Status atual: {whatsappInfo.enabled ? "ativado" : "desativado"}.
-            Phone Number ID configurado: {whatsappInfo.phoneNumberIdConfigured ? "sim" : "nao"}.
-          </p>
-          <div className={styles.formGrid}>
-            <label className={styles.field}>
-              <span>Access Token</span>
+      <section aria-label="Profissionais da equipe" className={cn(ui.onlyMobile, ui.stackSm)} style={{ flexDirection: "column" }}>
+        {users.map((user) => (
+          <Card key={user.id}>
+            <div className={ui.cellUser}>
+              <Avatar name={user.name} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <strong>{user.name}</strong>
+                <small>{user.specialty || "Especialidade não informada"}</small>
+              </div>
+              <Tag tone={user.role === "admin" ? "info" : "neutral"}>{roleLabel[user.role] ?? user.role}</Tag>
+            </div>
+            <span className={cn(ui.small, ui.muted)}>{user.email}</span>
+            {user.id !== currentUser.id ? (
+              <button className={cn(ui.btn, ui.btnDanger)} onClick={() => onDeleteUser(user.id)} type="button">
+                Excluir profissional
+              </button>
+            ) : (
+              <span className={cn(ui.small, ui.muted)}>Esta é a sua conta</span>
+            )}
+          </Card>
+        ))}
+      </section>
+
+      <div className={ui.row}>
+        <div id="add-professional">
+          <Card icon="plus" subtitle="O profissional recebe acesso com a senha inicial definida pela equipe" title="Adicionar profissional">
+            <div className={ui.fieldGrid}>
+              <Field label="Nome" required>
+                <input
+                  onChange={(event) => setUserForm((current) => ({ ...current, name: event.target.value }))}
+                  placeholder="Ex.: Dra. Costa"
+                  value={userForm.name}
+                />
+              </Field>
+              <Field label="E-mail" required>
+                <input
+                  onChange={(event) => setUserForm((current) => ({ ...current, email: event.target.value }))}
+                  placeholder="nome@clinica.com"
+                  type="email"
+                  value={userForm.email}
+                />
+              </Field>
+              <Field label="Especialidade">
+                <input
+                  onChange={(event) => setUserForm((current) => ({ ...current, specialty: event.target.value }))}
+                  placeholder="Ex.: Fisioterapia"
+                  value={userForm.specialty}
+                />
+              </Field>
+              <Field label="Perfil">
+                <select
+                  onChange={(event) => setUserForm((current) => ({ ...current, role: event.target.value }))}
+                  value={userForm.role}
+                >
+                  <option value="professional">Profissional</option>
+                  <option value="viewer">Visualizador</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </Field>
+            </div>
+            <div className={ui.formBar}>
+              <button className={cn(ui.btn, ui.btnPrimary)} disabled={busyUser} onClick={saveUser} type="button">
+                <Icon name="plus" />
+                {busyUser ? "Salvando..." : "Adicionar profissional"}
+              </button>
+            </div>
+          </Card>
+        </div>
+
+        <Card icon="shield" subtitle="Perfil registrado para cada profissional" title="Perfis de acesso">
+          <div className={ui.list}>
+            {ROLE_DESCRIPTIONS.map((role) => (
+              <div className={ui.listItem} key={role.id} style={{ alignItems: "flex-start" }}>
+                <IconChip icon={role.icon} tone={role.id === "admin" ? "blue" : "gray"} />
+                <div className={ui.listMain}>
+                  <div className={ui.listTitle}>
+                    {roleLabel[role.id]}
+                    <Tag tone={role.id === "admin" ? "info" : "neutral"}>{role.access}</Tag>
+                  </div>
+                  <span className={ui.listMeta}>{role.description}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Note warning>
+            Por enquanto o perfil é apenas informativo: a plataforma ainda não restringe ações por perfil.
+          </Note>
+        </Card>
+      </div>
+
+      <div className={ui.row}>
+        <Card
+          actions={<Tag tone={telegramInfo.enabled ? "success" : "neutral"}>{telegramInfo.enabled ? "Ativo" : "Inativo"}</Tag>}
+          icon="send"
+          subtitle={`Bot token ${telegramInfo.botTokenConfigured ? "configurado" : "não configurado"} · Webhook secret ${telegramInfo.webhookSecretConfigured ? "configurado" : "pendente"}`}
+          title="Integração com Telegram"
+        >
+          <div className={ui.fieldGrid}>
+            <Field label="Bot Token">
+              <input
+                onChange={(event) => setTelegramForm((current) => ({ ...current, botToken: event.target.value }))}
+                placeholder={telegramInfo.botTokenConfigured ? "•••••• (já configurado)" : ""}
+                value={telegramForm.botToken}
+              />
+            </Field>
+            <Field label="Bot Username">
+              <input
+                onChange={(event) => setTelegramForm((current) => ({ ...current, botUsername: event.target.value }))}
+                placeholder="@seu_bot"
+                value={telegramForm.botUsername}
+              />
+            </Field>
+            <Field className={ui.spanAll} label="Webhook Secret">
+              <input
+                onChange={(event) => setTelegramForm((current) => ({ ...current, webhookSecret: event.target.value }))}
+                value={telegramForm.webhookSecret}
+              />
+            </Field>
+          </div>
+          <label className={ui.switchRow}>
+            <span className={ui.switchText}>
+              <strong>Ativar integração</strong>
+              <small>Envio e recebimento de mensagens pelo bot</small>
+            </span>
+            <input
+              checked={telegramForm.enabled}
+              onChange={(event) => setTelegramForm((current) => ({ ...current, enabled: event.target.checked }))}
+              type="checkbox"
+            />
+          </label>
+          <div className={ui.formBar}>
+            <button className={cn(ui.btn, ui.btnPrimary)} disabled={busyTelegram} onClick={saveTelegram} type="button">
+              {busyTelegram ? "Salvando..." : "Salvar Telegram"}
+            </button>
+          </div>
+        </Card>
+
+        <Card
+          actions={<Tag tone={whatsappInfo.enabled ? "success" : "neutral"}>{whatsappInfo.enabled ? "Ativo" : "Inativo"}</Tag>}
+          icon="phone"
+          subtitle={`Phone Number ID ${whatsappInfo.phoneNumberIdConfigured ? "configurado" : "não configurado"}`}
+          title="Integração com WhatsApp"
+        >
+          <div className={ui.fieldGrid}>
+            <Field label="Access Token">
               <input
                 onChange={(event) => setWhatsAppForm((current) => ({ ...current, accessToken: event.target.value }))}
                 value={whatsAppForm.accessToken}
               />
-            </label>
-            <label className={styles.field}>
-              <span>Phone Number ID</span>
+            </Field>
+            <Field label="Phone Number ID">
               <input
                 onChange={(event) => setWhatsAppForm((current) => ({ ...current, phoneNumberId: event.target.value }))}
                 value={whatsAppForm.phoneNumberId}
               />
-            </label>
-            <label className={styles.field}>
-              <span>Business Account ID</span>
+            </Field>
+            <Field label="Business Account ID">
               <input
                 onChange={(event) =>
                   setWhatsAppForm((current) => ({ ...current, businessAccountId: event.target.value }))
                 }
                 value={whatsAppForm.businessAccountId}
               />
-            </label>
-            <label className={styles.field}>
-              <span>Verify Token</span>
+            </Field>
+            <Field label="Verify Token">
               <input
                 onChange={(event) => setWhatsAppForm((current) => ({ ...current, verifyToken: event.target.value }))}
                 value={whatsAppForm.verifyToken}
               />
-            </label>
-            <label className={styles.field}>
-              <span>App Secret</span>
+            </Field>
+            <Field label="App Secret">
               <input
                 onChange={(event) => setWhatsAppForm((current) => ({ ...current, appSecret: event.target.value }))}
                 value={whatsAppForm.appSecret}
               />
-            </label>
-            <label className={styles.field}>
-              <span>Versao da API</span>
+            </Field>
+            <Field label="Versão da API">
               <input
                 onChange={(event) => setWhatsAppForm((current) => ({ ...current, apiVersion: event.target.value }))}
                 value={whatsAppForm.apiVersion}
               />
-            </label>
+            </Field>
           </div>
-          <label className={styles.toggleRow}>
+          <label className={ui.switchRow}>
+            <span className={ui.switchText}>
+              <strong>Ativar integração</strong>
+              <small>WhatsApp Cloud API da Meta</small>
+            </span>
             <input
               checked={whatsAppForm.enabled}
               onChange={(event) => setWhatsAppForm((current) => ({ ...current, enabled: event.target.checked }))}
               type="checkbox"
             />
-            <span>Ativar integracao</span>
           </label>
-          <button className={styles.primaryButton} disabled={busyWhatsApp} onClick={saveWhatsApp} type="button">
-            {busyWhatsApp ? "Salvando..." : "Salvar integracao"}
-          </button>
-        </section>
+          <div className={ui.formBar}>
+            <button className={cn(ui.btn, ui.btnPrimary)} disabled={busyWhatsApp} onClick={saveWhatsApp} type="button">
+              {busyWhatsApp ? "Salvando..." : "Salvar WhatsApp"}
+            </button>
+          </div>
+        </Card>
       </div>
 
-      <div className={styles.contentGrid}>
-        <section className={cn(styles.panel, styles.formPanel)}>
-          <h2>Integracao com Telegram</h2>
-          <p className={styles.infoText}>
-            Status atual: {telegramInfo.enabled ? "ativado" : "desativado"}.
-            Bot token configurado: {telegramInfo.botTokenConfigured ? "sim" : "nao"}.
-          </p>
-          <div className={styles.formGrid}>
-            <label className={styles.field}>
-              <span>Bot Token</span>
-              <input
-                onChange={(event) => setTelegramForm((current) => ({ ...current, botToken: event.target.value }))}
-                value={telegramForm.botToken}
-              />
-            </label>
-            <label className={styles.field}>
-              <span>Bot Username</span>
-              <input
-                onChange={(event) => setTelegramForm((current) => ({ ...current, botUsername: event.target.value }))}
-                placeholder="@seu_bot"
-                value={telegramForm.botUsername}
-              />
-            </label>
-            <label className={styles.field}>
-              <span>Webhook Secret</span>
-              <input
-                onChange={(event) => setTelegramForm((current) => ({ ...current, webhookSecret: event.target.value }))}
-                value={telegramForm.webhookSecret}
-              />
-            </label>
+      <div className={ui.row}>
+        <Card icon="user" title="Estado da sessão">
+          <div className={ui.infoGrid}>
+            <div className={ui.info}>
+              <span>Usuário conectado</span>
+              <strong>{currentUser.name}</strong>
+            </div>
+            <div className={ui.info}>
+              <span>Webhook secret do Telegram</span>
+              <strong>{telegramInfo.webhookSecretConfigured ? "Configurado" : "Pendente"}</strong>
+            </div>
           </div>
-          <label className={styles.toggleRow}>
-            <input
-              checked={telegramForm.enabled}
-              onChange={(event) => setTelegramForm((current) => ({ ...current, enabled: event.target.checked }))}
-              type="checkbox"
-            />
-            <span>Ativar integracao</span>
-          </label>
-          <button className={styles.primaryButton} disabled={busyTelegram} onClick={saveTelegram} type="button">
-            {busyTelegram ? "Salvando..." : "Salvar Telegram"}
-          </button>
-        </section>
+        </Card>
 
-        <section className={cn(styles.panel, styles.formPanel)}>
-          <h2>Estado da Sessao</h2>
-          <div className={styles.infoList}>
-            <div className={styles.infoRow}>
-              <Icon name="team" className={styles.buttonIcon} />
-              <span>Usuario conectado: {currentUser.name}</span>
-            </div>
-            <div className={styles.infoRow}>
-              <Icon name="clock" className={styles.buttonIcon} />
-              <span>Webhook secret no Telegram: {telegramInfo.webhookSecretConfigured ? "configurado" : "pendente"}</span>
-            </div>
-          </div>
-        </section>
+        <Card icon="link" title="Como conectar os webhooks">
+          <ul className={ui.bullets}>
+            <li>
+              Telegram: <span className={ui.code}>https://seu-dominio/api/telegram/webhook</span> (registrado ao salvar a integração).
+            </li>
+            <li>
+              WhatsApp: <span className={ui.code}>https://seu-dominio/api/whatsapp/webhook</span> com o verify token salvo acima.
+            </li>
+            <li>Os envios agendados continuam disparando enquanto o servidor estiver rodando.</li>
+          </ul>
+        </Card>
       </div>
-
-      <article className={cn(styles.panel, styles.tablePanel)}>
-        <h2>Profissionais da Equipe</h2>
-        <table className={styles.dataTable}>
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Especialidade</th>
-              <th>Funcao</th>
-              <th>Email</th>
-              <th>Status</th>
-              <th>Acoes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id}>
-                <td data-label="Nome">{user.name}</td>
-                <td data-label="Especialidade">{user.specialty}</td>
-                <td data-label="Funcao">{user.role}</td>
-                <td data-label="Email">{user.email}</td>
-                <td data-label="Status">
-                  <span className={cn(styles.badge, badgeTone("Ativo"))}>Ativo</span>
-                </td>
-                <td data-label="Acoes">
-                  {user.id !== currentUser.id ? (
-                    <button className={styles.tableButton} onClick={() => onDeleteUser(user.id)} type="button">
-                      Excluir
-                    </button>
-                  ) : (
-                    <span className={styles.inlineMuted}>Usuario atual</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </article>
-
-      <section className={cn(styles.panel, styles.webhookPanel)}>
-        <h2>Como conectar os webhooks</h2>
-        <div className={styles.infoList}>
-          <div className={styles.infoRow}>
-            <Icon name="team" className={styles.buttonIcon} />
-            <span>WhatsApp: `https://seu-dominio/api/whatsapp/webhook` com o verify token salvo acima.</span>
-          </div>
-          <div className={styles.infoRow}>
-            <Icon name="clock" className={styles.buttonIcon} />
-            <span>Telegram: `https://seu-dominio/api/telegram/webhook` com o secret token opcional.</span>
-          </div>
-          <div className={styles.infoRow}>
-            <Icon name="clock" className={styles.buttonIcon} />
-            <span>Os envios agendados continuam disparando enquanto o servidor estiver rodando.</span>
-          </div>
-        </div>
-      </section>
-    </section>
+    </>
   );
 }

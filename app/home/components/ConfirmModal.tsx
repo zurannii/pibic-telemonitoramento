@@ -1,6 +1,6 @@
 "use client";
 
-import styles from "../../page.module.css";
+import { ui } from "./ui";
 
 type ConfirmModalProps = {
   actionLabel?: string;
@@ -24,15 +24,15 @@ export function ConfirmModal({
   }
 
   return (
-    <div className={styles.modalBackdrop} role="presentation">
-      <div aria-modal="true" className={styles.modalCard} role="dialog">
+    <div className={ui.modalBackdrop} role="presentation">
+      <div aria-modal="true" className={ui.modal} role="dialog">
         <h2>{title}</h2>
         <p>{description}</p>
-        <div className={styles.modalActions}>
-          <button className={styles.ghostButton} onClick={onCancel} type="button">
+        <div className={`${ui.formBar}`}>
+          <button className={`${ui.btn} ${ui.btnSecondary}`} onClick={onCancel} type="button">
             Cancelar
           </button>
-          <button className={styles.primaryButton} onClick={onConfirm} type="button">
+          <button className={`${ui.btn} ${ui.btnPrimary}`} onClick={onConfirm} type="button">
             {actionLabel}
           </button>
         </div>

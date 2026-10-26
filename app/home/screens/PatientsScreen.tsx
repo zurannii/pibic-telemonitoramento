@@ -1,11 +1,22 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import styles from "../../page.module.css";
 import type { PatientListItem } from "@/lib/shared/types";
-import { badgeTone, cn } from "../utils";
+import { cn } from "../utils";
 import { Icon } from "../components/Icon";
 import type { ScreenId } from "../types";
+import {
+  Avatar,
+  Card,
+  EmptyState,
+  Field,
+  PageHeader,
+  PatientStatusTag,
+  Tag,
+  formatDateTime,
+  timeAgo,
+  ui
+} from "../components/ui";
 
 type PatientsScreenProps = {
   onDeletePatient: (patientId: string) => void;
@@ -14,14 +25,22 @@ type PatientsScreenProps = {
   selectScreen: (screen: ScreenId) => void;
 };
 
-function translateStatus(status: PatientListItem["status"]) {
-  if (status === "critical") return "Critico";
-  if (status === "attention") return "Atencao";
-  return "Estavel";
-}
-
-function translateChannel(channel: PatientListItem["preferredChannel"]) {
-  return channel === "telegram" ? "Telegram" : "WhatsApp";
+function ChannelCell({ patient }: { patient: PatientListItem }) {
+  const isTelegram = patient.preferredChannel === "telegram";
+  return (
+    <div className={ui.tagRow}>
+      <span className={ui.pill}>
+        <Icon name={isTelegram ? "send" : "phone"} />
+        {isTelegram ? "Telegram" : "WhatsApp"}
+      </span>
+      {isTelegram && !patient.telegramLinkedAt ? <Tag tone="warning">Aguardando /start</Tag> : null}
+      {patient.requiresAudioMessages ? (
+        <Tag icon="volume" tone="purple">
+          Áudio assistido
+        </Tag>
+      ) : null}
+    </div>
+  );
 }
 
 export function PatientsScreen({
@@ -31,99 +50,197 @@ export function PatientsScreen({
   selectScreen
 }: PatientsScreenProps) {
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | PatientListItem["status"]>("all");
 
   const filteredPatients = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) {
-      return patients;
-    }
-
-    return patients.filter((patient) =>
-      [patient.name, patient.condition, patient.phone].some((field) => field.toLowerCase().includes(term))
-    );
-  }, [patients, search]);
+    return patients.filter((patient) => {
+      if (statusFilter !== "all" && patient.status !== statusFilter) return false;
+      if (!term) return true;
+      return [patient.name, patient.condition, patient.phone].some((field) =>
+        field.toLowerCase().includes(term)
+      );
+    });
+  }, [patients, search, statusFilter]);
 
   return (
-    <section className={styles.screen}>
-      <div className={styles.pageHead}>
-        <div className={styles.pageHeading}>
-          <h1>Lista de Pacientes</h1>
-          <p>Cadastre, acompanhe e abra o perfil de cada paciente.</p>
-        </div>
-        <button className={styles.primaryButton} onClick={() => selectScreen("patient-create")} type="button">
-          Adicionar Paciente
-        </button>
-      </div>
+    <>
+      <PageHeader
+        actions={
+          <button className={cn(ui.btn, ui.btnPrimary)} onClick={() => selectScreen("patient-create")} type="button">
+            <Icon name="plus" />
+            Adicionar paciente
+          </button>
+        }
+        subtitle="Busque, filtre e acompanhe os pacientes ativos"
+        title="Pacientes"
+      />
 
-      <div className={cn(styles.panel, styles.compactPanel)}>
-        <div className={styles.toolbar}>
-          <div className={styles.toolbarSearch}>
-            <Icon name="search" className={styles.toolbarIcon} />
+      <Card>
+        <div className={ui.filterRow}>
+          <Field className={ui.filterGrow} label="Buscar">
             <input
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar por nome, condicao ou telefone..."
+              placeholder="Nome, condição ou telefone"
               type="search"
               value={search}
             />
-          </div>
+          </Field>
+          <Field label="Status">
+            <select
+              onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
+              value={statusFilter}
+            >
+              <option value="all">Todos</option>
+              <option value="critical">Crítico</option>
+              <option value="attention">Atenção</option>
+              <option value="stable">Estável</option>
+            </select>
+          </Field>
+          {search || statusFilter !== "all" ? (
+            <button
+                className={cn(ui.btn, ui.btnGhost)}
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("all");
+                }}
+                type="button"
+              >
+                Limpar filtros
+              </button>
+          ) : null}
         </div>
-      </div>
+      </Card>
 
-      <article className={cn(styles.panel, styles.tablePanel)}>
-        <table className={styles.dataTable}>
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Idade</th>
-              <th>Contato</th>
-              <th>Canal</th>
-              <th>Ultima Resposta</th>
-              <th>Status</th>
-              <th>Responsavel</th>
-              <th>Acao</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredPatients.map((patient) => (
-              <tr key={patient.id}>
-                <td data-label="Nome">{patient.name}</td>
-                <td data-label="Idade">{patient.age}</td>
-                <td data-label="Contato">{patient.phone}</td>
-                <td data-label="Canal">
-                  {translateChannel(patient.preferredChannel)}
-                  {patient.preferredChannel === "telegram" && !patient.telegramLinkedAt ? " (aguardando /start)" : ""}
-                  {patient.requiresAudioMessages ? " • áudio assistido" : ""}
-                </td>
-                <td data-label="Ultima resposta">
-                  {patient.lastResponseAt
-                    ? new Date(patient.lastResponseAt).toLocaleString("pt-BR")
-                    : "Sem resposta ainda"}
-                </td>
-                <td data-label="Status">
-                  <span className={cn(styles.badge, badgeTone(translateStatus(patient.status)))}>
-                    {translateStatus(patient.status)}
-                  </span>
-                </td>
-                <td data-label="Responsavel">{patient.responsibleName ?? "Sem responsavel"}</td>
-                <td data-label="Acoes">
-                  <div className={styles.tableActionRow}>
-                    <button className={styles.tableButton} onClick={() => onOpenPatientProfile(patient.id)} type="button">
-                      Ver Perfil
-                    </button>
-                    <button className={styles.tableButton} onClick={() => onDeletePatient(patient.id)} type="button">
-                      Excluir
-                    </button>
-                  </div>
-                </td>
+      <Card className={ui.onlyDesktop} variant="flush">
+        <div className={ui.tableWrap}>
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th>Paciente</th>
+                <th>Idade</th>
+                <th>Canal</th>
+                <th>Última resposta</th>
+                <th>Status</th>
+                <th>Responsável</th>
+                <th>Ações</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <div className={styles.tableFooter}>
-          <span>Mostrando {filteredPatients.length} paciente(s)</span>
+            </thead>
+            <tbody>
+              {filteredPatients.map((patient) => (
+                <tr key={patient.id}>
+                  <td>
+                    <div className={ui.cellUser}>
+                      <Avatar name={patient.name} size="sm" />
+                      <div>
+                        <strong>{patient.name}</strong>
+                        <small>{patient.condition}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{patient.age}</td>
+                  <td>
+                    <ChannelCell patient={patient} />
+                  </td>
+                  <td>
+                    <span
+                      className={ui.cellInline}
+                      title={patient.lastResponseAt ? formatDateTime(patient.lastResponseAt) : undefined}
+                    >
+                      <Icon name="clock" />
+                      {timeAgo(patient.lastResponseAt)}
+                    </span>
+                  </td>
+                  <td>
+                    <PatientStatusTag status={patient.status} />
+                  </td>
+                  <td>{patient.responsibleName ?? "Sem responsável"}</td>
+                  <td>
+                    <div className={ui.actions} style={{ flexWrap: "nowrap" }}>
+                      <button
+                        className={cn(ui.btn, ui.btnSecondary, ui.btnSm)}
+                        onClick={() => onOpenPatientProfile(patient.id)}
+                        type="button"
+                      >
+                        Ver perfil
+                      </button>
+                      <button
+                        aria-label={`Excluir ${patient.name}`}
+                        className={cn(ui.btn, ui.btnDanger, ui.btnIcon)}
+                        onClick={() => onDeletePatient(patient.id)}
+                        title="Excluir paciente"
+                        type="button"
+                      >
+                        <Icon name="trash" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </article>
-    </section>
+
+        {!filteredPatients.length ? (
+          <EmptyState
+            description="Tente buscar por outro nome, condição ou telefone."
+            title="Nenhum paciente encontrado"
+          />
+        ) : null}
+
+        <div className={ui.tableFooter}>
+          <span>
+            Mostrando {filteredPatients.length} de {patients.length} paciente(s)
+          </span>
+        </div>
+      </Card>
+
+      <section aria-label="Pacientes encontrados" className={cn(ui.onlyMobile, ui.stackSm)} style={{ flexDirection: "column" }}>
+        {filteredPatients.map((patient) => (
+          <Card key={patient.id}>
+            <div className={ui.cellUser}>
+              <Avatar name={patient.name} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <strong>{patient.name}</strong>
+                <small>
+                  {patient.age} anos · {patient.condition}
+                </small>
+              </div>
+              <PatientStatusTag status={patient.status} />
+            </div>
+            <ChannelCell patient={patient} />
+            <div className={ui.infoGrid}>
+              <div className={ui.info}>
+                <span>Responsável</span>
+                <strong>{patient.responsibleName ?? "Não definido"}</strong>
+              </div>
+              <div className={ui.info}>
+                <span>Última resposta</span>
+                <strong>{timeAgo(patient.lastResponseAt, "Nenhuma resposta")}</strong>
+              </div>
+            </div>
+            <div className={ui.formBar}>
+              <button className={cn(ui.btn, ui.btnDanger)} onClick={() => onDeletePatient(patient.id)} type="button">
+                Excluir
+              </button>
+              <button
+                className={cn(ui.btn, ui.btnPrimary)}
+                onClick={() => onOpenPatientProfile(patient.id)}
+                type="button"
+              >
+                Abrir perfil
+              </button>
+            </div>
+          </Card>
+        ))}
+
+        {!filteredPatients.length ? (
+          <EmptyState
+            description="Tente buscar por outro nome, condição ou telefone."
+            title="Nenhum paciente encontrado"
+          />
+        ) : null}
+      </section>
+    </>
   );
 }

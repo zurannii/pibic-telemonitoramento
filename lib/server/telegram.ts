@@ -65,6 +65,16 @@ export function isTelegramConfigured(settings: TelegramSettings): boolean {
   return Boolean(settings.enabled && settings.botToken);
 }
 
+export function describeTelegramConfigIssue(settings: TelegramSettings): string {
+  if (!settings.enabled && !settings.botToken) {
+    return "A integração com o Telegram está desativada e sem token do bot. Configure em Equipe > Integração com Telegram (ou nas variáveis TELEGRAM_ENABLED e TELEGRAM_BOT_TOKEN).";
+  }
+  if (!settings.enabled) {
+    return "A integração com o Telegram está desativada. Ative em Equipe > Integração com Telegram (ou TELEGRAM_ENABLED=true).";
+  }
+  return "Falta o token do bot do Telegram. Informe em Equipe > Integração com Telegram (ou na variável TELEGRAM_BOT_TOKEN).";
+}
+
 async function readResponseBytes(response: Response, maxBytes: number, timeoutMs: number) {
   if (!response.body) {
     throw new TelegramFileDownloadError("invalid-file", "O Telegram retornou um arquivo vazio.");
@@ -131,7 +141,7 @@ export async function downloadTelegramFile(
   if (!isTelegramConfigured(settings)) {
     throw new TelegramFileDownloadError(
       "download-failed",
-      "A integracao com o Telegram esta desativada ou incompleta."
+      describeTelegramConfigIssue(settings)
     );
   }
 
@@ -320,7 +330,7 @@ export async function sendTelegramTextMessage(
   body: string
 ): Promise<SendTelegramResult> {
   if (!isTelegramConfigured(settings)) {
-    return { ok: false, messageId: null, error: "A integração com o Telegram está desativada ou incompleta." };
+    return { ok: false, messageId: null, error: describeTelegramConfigIssue(settings) };
   }
 
   if (!chatId) {
@@ -359,7 +369,7 @@ export async function sendTelegramVoiceMessage(
     return {
       ok: false,
       messageId: null,
-      error: "A integracao com o Telegram esta desativada ou incompleta."
+      error: describeTelegramConfigIssue(settings)
     };
   }
 

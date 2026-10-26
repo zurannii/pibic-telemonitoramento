@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import styles from "./page.module.css";
+import { ui } from "./home/components/ui";
+import { cn } from "./home/utils";
 
 import { AuthPanel } from "./home/components/AuthPanel";
 import { ConfirmModal } from "./home/components/ConfirmModal";
@@ -47,42 +48,48 @@ export default function Home() {
   }, [mobileNavOpen]);
 
   if (controller.loadingSession) {
-    return <main className={styles.loadingScreen}>Carregando plataforma...</main>;
+    return (
+      <main className={cn(ui.root, ui.loading)}>Carregando plataforma...</main>
+    );
   }
 
   if (!controller.bootstrap) {
     if (controller.loadError) {
       return (
-        <>
-          <main className={styles.loadingScreen}>
-            <section className={styles.authPanel}>
-              <div className={styles.authHero}>
-                <span className={styles.authEyebrow}>Falha ao iniciar</span>
+        <div className={ui.root}>
+          <main className={ui.auth}>
+            <section className={ui.authPanel}>
+              <div className={ui.authHero}>
+                <span className={ui.authEyebrow}>Falha ao iniciar</span>
                 <h1>Não conseguimos carregar a plataforma agora.</h1>
                 <p>{controller.loadError}</p>
               </div>
 
-              <section className={styles.authCard}>
-                <p className={styles.infoText}>
+              <section className={ui.authCard}>
+                <p className={ui.pageSub}>
                   A sessão será tentada novamente quando você recarregar a aplicação.
                 </p>
-                <div className={styles.formActions}>
-                  <button className={styles.primaryButton} onClick={controller.retryInitialLoad} type="button">
-                    Tentar novamente
-                  </button>
-                </div>
+                <button
+                  className={cn(ui.btn, ui.btnPrimary, ui.btnBlock)}
+                  onClick={controller.retryInitialLoad}
+                  type="button"
+                >
+                  Tentar novamente
+                </button>
               </section>
             </section>
           </main>
           <ToastStack items={controller.toasts} />
-        </>
+        </div>
       );
     }
 
     return (
       <>
         <AuthPanel busy={controller.working} onLogin={controller.handleLogin} onRegister={controller.handleRegister} />
-        <ToastStack items={controller.toasts} />
+        <div className={ui.root}>
+          <ToastStack items={controller.toasts} />
+        </div>
       </>
     );
   }
@@ -92,7 +99,20 @@ export default function Home() {
     controller.activeScreen === "patient-create" || controller.activeScreen === "patient-profile"
       ? "patients"
       : controller.activeScreen;
-  const isPatientProfile = controller.activeScreen === "patient-profile";
+  const activeAlertCount = bootstrap.alerts.filter((alert) => alert.status === "active").length;
+  const mobilePageTitle =
+    controller.activeScreen === "patient-create"
+      ? "Novo paciente"
+      : controller.activeScreen === "patient-profile"
+        ? "Perfil do paciente"
+        : {
+            overview: "Visão geral",
+            patients: "Pacientes",
+            alerts: "Alertas",
+            questions: "Perguntas",
+            reports: "Relatórios",
+            team: "Equipe"
+          }[activeNav as Exclude<ScreenId, "patient-create" | "patient-profile">];
 
   const renderScreen = () => {
     switch (controller.activeScreen) {
@@ -101,6 +121,8 @@ export default function Home() {
           <OverviewScreen
             dashboard={bootstrap.dashboard}
             onOpenPatient={controller.openPatientProfile}
+            patients={bootstrap.patients}
+            selectScreen={controller.selectScreen}
           />
         );
       case "patients":
@@ -137,7 +159,7 @@ export default function Home() {
             users={bootstrap.users}
           />
         ) : (
-          <main className={styles.loadingScreen}>Carregando perfil do paciente...</main>
+          <main className={ui.loading}>Carregando perfil do paciente...</main>
         );
       case "alerts":
         return (
@@ -185,33 +207,40 @@ export default function Home() {
   };
 
   return (
-    <>
-      <div className={`${styles.appShell} ${isPatientProfile ? styles.appShellSingle : ""}`}>
+    <div className={ui.root}>
+      <div className={ui.shell}>
         <Sidebar
           activeNav={activeNav as Exclude<ScreenId, "patient-create">}
-          desktopHidden={isPatientProfile}
+          alertCount={activeAlertCount}
           onClose={() => setMobileNavOpen(false)}
+          onLogout={controller.handleLogout}
           onSelectScreen={controller.selectScreen}
           open={mobileNavOpen}
+          userName={bootstrap.currentUser.name}
+          userRole={bootstrap.currentUser.role}
         />
-        {mobileNavOpen ? (
-          <button
-            aria-label="Fechar menu principal"
-            className={styles.mobileNavOverlay}
-            onClick={() => setMobileNavOpen(false)}
-            type="button"
-          />
-        ) : null}
+        <button
+          aria-hidden={!mobileNavOpen}
+          aria-label="Fechar menu principal"
+          className={cn(ui.overlay, mobileNavOpen && ui.overlayVisible)}
+          onClick={() => setMobileNavOpen(false)}
+          tabIndex={mobileNavOpen ? 0 : -1}
+          type="button"
+        />
 
-        <main className={styles.dashboard}>
+        <div className={ui.main}>
           <Topbar
             menuOpen={mobileNavOpen}
             onLogout={controller.handleLogout}
+            onOpenAlerts={() => controller.selectScreen("alerts")}
             onOpenMenu={() => setMobileNavOpen(true)}
+            pageTitle={mobilePageTitle}
             userName={bootstrap.currentUser.name}
+            userRole={bootstrap.currentUser.role}
+            userSpecialty={bootstrap.currentUser.specialty}
           />
-          <div className={styles.screenStack}>{renderScreen()}</div>
-        </main>
+          <main className={ui.content}>{renderScreen()}</main>
+        </div>
       </div>
 
       <ConfirmModal
@@ -223,6 +252,6 @@ export default function Home() {
         title={controller.confirm.title}
       />
       <ToastStack items={controller.toasts} />
-    </>
+    </div>
   );
 }

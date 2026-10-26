@@ -13,3 +13,8 @@ dist
 !.env.example
 
 /generated/prisma
+
+# Backups e capturas locais (não versionar)
+_backup_antes_redesign/
+_backup_antes_redesign_figma/
+capturas_apresentacao/

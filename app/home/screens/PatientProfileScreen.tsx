@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import styles from "../../page.module.css";
 import type {
   PatientDetails,
   PatientReport,
@@ -9,9 +8,28 @@ import type {
   PublicUser,
   QuestionRecord
 } from "@/lib/shared/types";
-import type { PatientProfileTab } from "../types";
-import { badgeTone, cn } from "../utils";
+import type { IconName, PatientProfileTab } from "../types";
+import { cn, displayLabel } from "../utils";
 import { Icon } from "../components/Icon";
+import {
+  AlertLevelTag,
+  AlertStatusTag,
+  Avatar,
+  BackLink,
+  Card,
+  EmptyState,
+  Field,
+  IconChip,
+  Kpi,
+  MessageStatusTag,
+  PatientStatusTag,
+  Tag,
+  formatDateTime,
+  roleLabel,
+  timeAgo,
+  ui,
+  weekdayLabels
+} from "../components/ui";
 import { ReportsScreen } from "./ReportsScreen";
 
 type PatientProfileScreenProps = {
@@ -50,20 +68,14 @@ type PatientProfileScreenProps = {
   users: PublicUser[];
 };
 
-const tabs: Array<{ id: PatientProfileTab; label: string }> = [
-  { id: "summary", label: "Resumo" },
-  { id: "responses", label: "Respostas" },
-  { id: "plan", label: "Plano" },
-  { id: "team", label: "Equipe" },
-  { id: "reports", label: "Relatorios" },
-  { id: "conduct", label: "Alertas" }
+const tabs: Array<{ id: PatientProfileTab; label: string; icon: IconName }> = [
+  { id: "summary", label: "Resumo", icon: "overview" },
+  { id: "responses", label: "Respostas", icon: "questions" },
+  { id: "plan", label: "Plano de monitoramento", icon: "calendar" },
+  { id: "team", label: "Equipe", icon: "patients" },
+  { id: "reports", label: "Relatórios", icon: "reports" },
+  { id: "conduct", label: "Alertas", icon: "alerts" }
 ];
-
-function statusLabel(status: PatientDetails["patient"]["status"]) {
-  if (status === "critical") return "Critico";
-  if (status === "attention") return "Atencao";
-  return "Estavel";
-}
 
 function channelLabel(channel: PatientDetails["patient"]["preferredChannel"]) {
   return channel === "telegram" ? "Telegram" : "WhatsApp";
@@ -155,420 +167,572 @@ export function PatientProfileScreen({
     }
   };
 
-  return (
-    <section className={styles.profileScreen}>
-      <button className={styles.profileBackButton} onClick={onBack} type="button">
-        <Icon name="arrow-left" className={styles.profileBackIcon} />
-        Voltar para lista
-      </button>
+  const lastInboundAt = details.messages
+    .filter((message) => message.direction === "inbound")
+    .map((message) => message.receivedAt ?? message.sentAt)
+    .filter((value): value is string => Boolean(value))
+    .sort((first, second) => new Date(second).getTime() - new Date(first).getTime())[0] ?? null;
+  const activeAlerts = details.alerts.filter((alert) => alert.status === "active");
+  const isTelegram = details.patient.preferredChannel === "telegram";
+  const messageDate = (message: PatientDetails["messages"][number]) =>
+    message.receivedAt ?? message.sentAt ?? null;
 
-      <section className={styles.profileHeaderCard}>
-        <div className={styles.profileHeaderMain}>
-          <span className={styles.profileAvatar} aria-hidden="true" />
-          <div className={styles.profileIdentity}>
-            <h1>{details.patient.name}</h1>
-            <p>{details.patient.age} anos • {details.patient.condition}</p>
-            <div className={styles.profileStatusRow}>
-              <span className={cn(styles.badge, badgeTone(statusLabel(details.patient.status)))}>
-                {statusLabel(details.patient.status)}
+  const renderMessage = (message: PatientDetails["messages"][number]) => {
+    const inbound = message.direction === "inbound";
+    return (
+      <div className={ui.listItem} key={message.id} style={{ alignItems: "flex-start" }}>
+        <IconChip
+          icon={message.type === "audio" ? "microphone" : inbound ? "questions" : "send"}
+          tone={inbound ? "blue" : "gray"}
+        />
+        <div className={ui.messageBody}>
+          <div className={ui.messageHead}>
+            <strong>{inbound ? "Resposta do paciente" : "Mensagem enviada"}</strong>
+            <span className={ui.pill}>{displayLabel(message.channel)}</span>
+            {message.type === "audio" ? (
+              <span className={ui.pill}>
+                <Icon name="microphone" />
+                Áudio
               </span>
-              {details.patient.requiresAudioMessages ? (
-                <span className={cn(styles.badge, styles.badgeSoft)}>Mensagens assistidas por audio</span>
-              ) : null}
-              <span>Responsavel: {responsibleName}</span>
+            ) : null}
+            <MessageStatusTag status={message.status} />
+            <span className={ui.messageTime}>
+              <Icon name="clock" />
+              {formatDateTime(messageDate(message))}
+            </span>
+          </div>
+          <div
+            className={cn(
+              ui.bubble,
+              !inbound && ui.bubbleOut,
+              message.status === "failed" && ui.bubbleError
+            )}
+          >
+            {message.body || "—"}
+          </div>
+          {message.status === "failed" && message.errorMessage ? (
+            <span className={cn(ui.small, ui.muted)}>Motivo: {message.errorMessage}</span>
+          ) : null}
+        </div>
+      </div>
+    );
+  };
+
+  const renderAlert = (alert: PatientDetails["alerts"][number]) => (
+    <article className={cn(ui.alertCard, alert.status === "resolved" && ui.alertResolved)} key={alert.id}>
+      <span
+        className={cn(
+          ui.alertBar,
+          alert.status === "resolved"
+            ? ui.alertBarDone
+            : alert.level === "high"
+              ? ui.alertBarHigh
+              : alert.level === "low" && ui.alertBarLow
+        )}
+      />
+      <div className={ui.listMain}>
+        <div className={ui.tagRow}>
+          <AlertStatusTag status={alert.status} />
+          <AlertLevelTag level={alert.level} />
+        </div>
+        <h3 className={ui.alertTitle}>{alert.title}</h3>
+        <span className={ui.listMeta}>{alert.description}</span>
+        <div className={ui.metaRow}>
+          <span>
+            <Icon name="calendar" />
+            {formatDateTime(alert.createdAt)}
+          </span>
+        </div>
+      </div>
+      {alert.status === "active" ? (
+        <button className={cn(ui.btn, ui.btnPrimary)} onClick={() => onResolveAlert(alert.id)} type="button">
+          <Icon name="check" />
+          Resolver
+        </button>
+      ) : null}
+    </article>
+  );
+
+  return (
+    <>
+      <BackLink label="Voltar para lista de pacientes" onClick={onBack} />
+
+      <section className={ui.patientHeader}>
+        <div className={ui.patientTop}>
+          <div className={ui.patientRow}>
+            <Avatar name={details.patient.name} size="lg" />
+            <div className={ui.patientIdentity}>
+              <h1 className={ui.patientName}>
+                {details.patient.name}
+                <PatientStatusTag status={details.patient.status} />
+                {details.patient.requiresAudioMessages ? (
+                  <Tag icon="volume" tone="purple">
+                    Mensagens em áudio
+                  </Tag>
+                ) : null}
+              </h1>
+              <p className={ui.patientMeta}>
+                {details.patient.age} anos · {details.patient.condition}
+              </p>
+            </div>
+            <button className={cn(ui.btn, ui.btnPrimary)} onClick={() => onSelectTab("responses")} type="button">
+              <Icon name="send" />
+              Enviar mensagem
+            </button>
+          </div>
+
+          <div className={ui.facts}>
+            <div className={ui.fact}>
+              <IconChip icon="clock" />
+              <div className={ui.factText}>
+                <small>Última resposta</small>
+                <strong>{timeAgo(lastInboundAt)}</strong>
+              </div>
+            </div>
+            <div className={ui.fact}>
+              <IconChip icon="user" />
+              <div className={ui.factText}>
+                <small>Responsável</small>
+                <strong>{responsibleName}</strong>
+              </div>
+            </div>
+            <div className={ui.fact}>
+              <IconChip icon={isTelegram ? "send" : "phone"} />
+              <div className={ui.factText}>
+                <small>Canal preferido</small>
+                <strong>
+                  {channelLabel(details.patient.preferredChannel)}
+                  {isTelegram ? (details.patient.telegramChatId ? " · vinculado" : " · aguardando /start") : ""}
+                </strong>
+              </div>
+            </div>
+            <div className={ui.fact}>
+              <IconChip icon="phone" />
+              <div className={ui.factText}>
+                <small>Telefone</small>
+                <strong>{details.patient.phone}</strong>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className={styles.profileCareTeam}>
-          <span>Canal preferido</span>
-          <strong>{channelLabel(details.patient.preferredChannel)}</strong>
-          <small>WhatsApp: {details.patient.phone}</small>
-          <small>
-            Telegram: {details.patient.telegramChatId ? `chat ${details.patient.telegramChatId}` : "aguardando /start"}
-          </small>
-        </div>
-      </section>
-
-      <section className={styles.profileWorkspace}>
-        <div className={styles.profileTabs}>
+        <div className={cn(ui.tabs, ui.patientTabs)} role="tablist" aria-label="Seções do paciente">
           {tabs.map((tab) => (
             <button
+              aria-selected={activeTab === tab.id}
+              className={cn(ui.tab, activeTab === tab.id && ui.tabActive)}
               key={tab.id}
-              className={cn(styles.profileTab, activeTab === tab.id && styles.profileTabActive)}
               onClick={() => onSelectTab(tab.id)}
+              role="tab"
               type="button"
             >
+              <Icon name={tab.icon} />
               {tab.label}
+              {tab.id === "conduct" && activeAlertCount > 0 ? (
+                <span className={ui.navCount}>{activeAlertCount}</span>
+              ) : null}
             </button>
           ))}
         </div>
+      </section>
 
-        <div className={styles.profileWorkspaceBody}>
-          {activeTab === "summary" && (
-            <>
-              <section className={styles.profileSummaryAiCard}>
-                <div className={styles.profileSummaryAiHeader}>
-                  <span className={styles.profileSummaryAiIcon}>
-                    <Icon name="idea" />
-                  </span>
-                  <div>
-                    <h2>Resumo operacional</h2>
-                    <p>Mostra se o paciente esta ativo, vinculado ao canal certo e com rotinas funcionando.</p>
-                  </div>
-                </div>
+      {activeTab === "summary" && (
+        <div className={ui.split}>
+          <div className={ui.stack}>
+            <Card
+              icon="idea"
+              subtitle="Mostra se o paciente está ativo, vinculado ao canal certo e com rotinas funcionando"
+              title="Resumo do acompanhamento"
+              variant="soft"
+            >
+              <div className={cn(ui.kpiRow, ui.kpiRowCompact)}>
+                <Kpi icon="calendar" label="Rotinas ativas" tone="amber" value={details.schedules.length} />
+                <Kpi icon="questions" label="Respostas recebidas" value={responseCount} />
+                <Kpi icon="alerts" label="Alertas ativos" tone="red" value={activeAlertCount} />
+                <Kpi
+                  icon={details.patient.preferredResponseFormat === "audio" ? "microphone" : "text"}
+                  label="Formato preferido"
+                  tone="purple"
+                  value={<span style={{ fontSize: 22 }}>{displayLabel(details.patient.preferredResponseFormat)}</span>}
+                />
+              </div>
+            </Card>
 
-                <div className={styles.profileMetricGrid}>
-                  <article className={styles.profileMetricCard}>
-                    <strong>{details.schedules.length}</strong>
-                    <small>Rotinas ativas</small>
-                  </article>
-                  <article className={styles.profileMetricCard}>
-                    <strong>{responseCount}</strong>
-                    <small>Respostas recebidas</small>
-                  </article>
-                  <article className={styles.profileMetricCard}>
-                    <strong>{activeAlertCount}</strong>
-                    <small>Alertas ativos</small>
-                  </article>
-                  <article className={styles.profileMetricCard}>
-                    <strong>{details.patient.preferredResponseFormat}</strong>
-                    <small>Formato preferido</small>
-                  </article>
-                </div>
-              </section>
-
-              <section className={styles.profileSectionCard}>
-                <h2>Vinculo com Telegram</h2>
-                <div className={styles.profilePlanMeta}>
-                  <div>
-                    <span>Status</span>
-                    <p>{details.patient.telegramLinkedAt ? "Vinculado" : "Aguardando /start"}</p>
-                  </div>
-                  <div>
-                    <span>Token de vinculo</span>
-                    <p>{details.patient.telegramLinkToken}</p>
-                  </div>
-                  <div>
-                    <span>Link</span>
-                    <p>{telegramLink ?? "Configure o bot username para gerar o link."}</p>
-                  </div>
-                </div>
-              </section>
-
-              <section className={styles.profileSectionCard}>
-                <h2>Ultimas mensagens</h2>
-                <div className={styles.profileRecentResponses}>
-                  {details.messages.slice(0, 5).map((message) => (
-                    <article key={message.id} className={styles.profileRecentResponseCard}>
-                      <div className={styles.profileRecentResponseLine} />
-                      <div className={styles.profileRecentResponseContent}>
-                        <small>
-                          {message.direction === "outbound" ? "Enviada" : "Recebida"} • {message.channel} •{" "}
-                          {new Date(message.receivedAt ?? message.sentAt ?? Date.now()).toLocaleString("pt-BR")}
-                        </small>
-                        <p>{message.body}</p>
-                        <strong>{message.status}</strong>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            </>
-          )}
-
-          {activeTab === "responses" && (
-            <>
-              <section className={styles.profileSectionCard}>
-                <h2>Enviar mensagem ao paciente</h2>
-                <p className={styles.infoText}>
-                  {details.patient.requiresAudioMessages
-                    ? "As perguntas e mensagens sao convertidas automaticamente em audio antes do envio."
-                    : "Envie uma pergunta cadastrada ou escreva uma mensagem personalizada."}
-                </p>
-                <div className={styles.profileInfoGrid}>
-                  <label className={styles.field}>
-                    <span>Pergunta</span>
-                    <select
-                      onChange={(event) =>
-                        setMessageForm((current) => ({ ...current, questionId: event.target.value }))
-                      }
-                      value={messageForm.questionId}
-                    >
-                      <option value="">Somente texto personalizado</option>
-                      {questions.map((question) => (
-                        <option key={question.id} value={question.id}>
-                          {question.title}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className={styles.field}>
-                    <span>Canal</span>
-                    <select
-                      onChange={(event) =>
-                        setMessageForm((current) => ({
-                          ...current,
-                          channel: event.target.value as "whatsapp" | "telegram"
-                        }))
-                      }
-                      value={messageForm.channel}
-                    >
-                      <option value="telegram">Telegram</option>
-                      <option value="whatsapp">WhatsApp</option>
-                    </select>
-                  </label>
-                  <label className={styles.field}>
-                    <span>Formato do envio</span>
-                    <select
-                      onChange={(event) =>
-                        setMessageForm((current) => ({
-                          ...current,
-                          messageType: event.target.value as OutboundMessageFormat
-                        }))
-                      }
-                      value={messageForm.messageType}
-                    >
-                      <option value="automatic">
-                        {details.patient.requiresAudioMessages
-                          ? "Automatico (audio assistido)"
-                          : "Automatico (preferencia do paciente)"}
-                      </option>
-                      <option value="text">Mensagem de texto</option>
-                      <option value="audio">Mensagem de audio</option>
-                    </select>
-                  </label>
-                </div>
-                <label className={styles.field}>
-                  <span>Mensagem personalizada (opcional)</span>
-                  <textarea
-                    onChange={(event) =>
-                      setMessageForm((current) => ({ ...current, text: event.target.value }))
-                    }
-                    placeholder="Se preenchida, esta mensagem substitui o texto da pergunta selecionada."
-                    rows={4}
-                    value={messageForm.text}
-                  />
-                </label>
+            <Card
+              actions={
                 <button
-                  className={styles.primaryButton}
-                  disabled={sendingMessage || (!messageForm.questionId && !messageForm.text.trim())}
-                  onClick={handleSendMessage}
+                  className={cn(ui.btn, ui.btnGhost, ui.btnSm)}
+                  onClick={() => onSelectTab("responses")}
                   type="button"
                 >
-                  {sendingMessage ? "Enviando..." : "Enviar mensagem"}
+                  Ver todas
+                  <Icon name="chevron-right" />
                 </button>
-              </section>
+              }
+              icon="questions"
+              title="Últimas mensagens"
+            >
+              {details.messages.length ? (
+                <div className={ui.list}>{details.messages.slice(0, 5).map(renderMessage)}</div>
+              ) : (
+                <EmptyState icon="questions" title="Nenhuma mensagem trocada ainda" />
+              )}
+            </Card>
+          </div>
 
-              <section className={styles.profileSectionCard}>
-                <h2>Historico de Respostas</h2>
-                <div className={styles.profileResponseCards}>
-                  {details.messages.map((message) => (
-                    <article key={message.id} className={styles.profileResponseCard}>
-                      <div className={styles.profileResponseHeader}>
-                        <span className={styles.profileResponseHeaderIcon}>
-                          <Icon
-                            name={message.type === "audio" ? "microphone" : "questions"}
-                            className={styles.profileResponseRecordIcon}
-                          />
+          <div className={ui.stack}>
+            <Card
+              actions={
+                <Tag tone={details.patient.telegramLinkedAt ? "success" : "warning"}>
+                  {details.patient.telegramLinkedAt ? "Vinculado" : "Aguardando /start"}
+                </Tag>
+              }
+              icon="send"
+              title="Vínculo com Telegram"
+            >
+              <div className={ui.info}>
+                <span>Token de vínculo</span>
+                <span className={ui.code}>{details.patient.telegramLinkToken}</span>
+              </div>
+              <div className={ui.info}>
+                <span>Link para o paciente</span>
+                {telegramLink ? (
+                  <a className={ui.code} href={telegramLink} rel="noreferrer" target="_blank">
+                    {telegramLink}
+                  </a>
+                ) : (
+                  <span className={cn(ui.small, ui.muted)}>Configure o username do bot na tela Equipe para gerar o link.</span>
+                )}
+              </div>
+            </Card>
+
+            <Card
+              actions={
+                details.alerts.length ? (
+                  <button
+                    className={cn(ui.btn, ui.btnGhost, ui.btnSm)}
+                    onClick={() => onSelectTab("conduct")}
+                    type="button"
+                  >
+                    Ver todos
+                    <Icon name="chevron-right" />
+                  </button>
+                ) : null
+              }
+              icon="alerts"
+              title="Alertas ativos"
+            >
+              {activeAlerts.length ? (
+                <div className={ui.list}>
+                  {activeAlerts.slice(0, 3).map((alert) => (
+                    <div className={ui.listItem} key={alert.id} style={{ alignItems: "flex-start" }}>
+                      <div className={ui.listMain}>
+                        <div className={ui.listTitle}>
+                          {alert.title}
+                          <AlertLevelTag level={alert.level} />
+                        </div>
+                        <span className={ui.listMeta}>{alert.description}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState icon="check" title="Nenhum alerta ativo" />
+              )}
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "responses" && (
+        <div className={ui.split}>
+          <Card icon="questions" subtitle="Mensagens enviadas e respostas recebidas" title="Histórico de mensagens">
+            {details.messages.length ? (
+              <div className={ui.list}>{details.messages.map(renderMessage)}</div>
+            ) : (
+              <EmptyState icon="questions" title="Nenhuma mensagem trocada ainda" />
+            )}
+          </Card>
+
+          <Card
+            icon="send"
+            subtitle={
+              details.patient.requiresAudioMessages
+                ? "As perguntas e mensagens são convertidas automaticamente em áudio antes do envio."
+                : "Envie uma pergunta cadastrada ou escreva uma mensagem personalizada."
+            }
+            title="Enviar mensagem"
+          >
+            <Field label="Pergunta">
+              <select
+                onChange={(event) => setMessageForm((current) => ({ ...current, questionId: event.target.value }))}
+                value={messageForm.questionId}
+              >
+                <option value="">Somente texto personalizado</option>
+                {questions.map((question) => (
+                  <option key={question.id} value={question.id}>
+                    {question.title}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Canal">
+              <select
+                onChange={(event) =>
+                  setMessageForm((current) => ({
+                    ...current,
+                    channel: event.target.value as "whatsapp" | "telegram"
+                  }))
+                }
+                value={messageForm.channel}
+              >
+                <option value="telegram">Telegram</option>
+                <option value="whatsapp">WhatsApp</option>
+              </select>
+            </Field>
+            <Field label="Formato do envio">
+              <select
+                onChange={(event) =>
+                  setMessageForm((current) => ({
+                    ...current,
+                    messageType: event.target.value as OutboundMessageFormat
+                  }))
+                }
+                value={messageForm.messageType}
+              >
+                <option value="automatic">
+                  {details.patient.requiresAudioMessages
+                    ? "Automático (áudio assistido)"
+                    : "Automático (preferência do paciente)"}
+                </option>
+                <option value="text">Mensagem de texto</option>
+                <option value="audio">Mensagem de áudio</option>
+              </select>
+            </Field>
+            <Field hint="Se preenchida, substitui o texto da pergunta selecionada." label="Mensagem personalizada (opcional)">
+              <textarea
+                onChange={(event) => setMessageForm((current) => ({ ...current, text: event.target.value }))}
+                rows={4}
+                value={messageForm.text}
+              />
+            </Field>
+            <button
+              className={cn(ui.btn, ui.btnPrimary, ui.btnBlock)}
+              disabled={sendingMessage || (!messageForm.questionId && !messageForm.text.trim())}
+              onClick={handleSendMessage}
+              type="button"
+            >
+              <Icon name="send" />
+              {sendingMessage ? "Enviando..." : "Enviar mensagem"}
+            </button>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === "plan" && (
+        <div className={ui.splitLeft}>
+          <div className={ui.stack}>
+            <Card icon="settings" title="Configurações gerais">
+              <div className={ui.stackSm}>
+                <div className={ui.info}>
+                  <span>Canal de comunicação</span>
+                  <strong>{channelLabel(details.patient.preferredChannel)}</strong>
+                </div>
+                <hr className={ui.divider} />
+                <div className={ui.info}>
+                  <span>Formato preferencial</span>
+                  <strong>{displayLabel(details.patient.preferredResponseFormat)}</strong>
+                </div>
+                <hr className={ui.divider} />
+                <div className={ui.info}>
+                  <span>Acessibilidade de leitura</span>
+                  <strong>{details.patient.requiresAudioMessages ? "Mensagens em áudio" : "Mensagens em texto"}</strong>
+                </div>
+                <hr className={ui.divider} />
+                <div className={ui.info}>
+                  <span>Melhor horário</span>
+                  <strong>
+                    {details.patient.contactWindowStart} – {details.patient.contactWindowEnd}
+                  </strong>
+                </div>
+                <hr className={ui.divider} />
+                <div className={ui.info}>
+                  <span>Profissional responsável</span>
+                  <strong>{responsibleName}</strong>
+                </div>
+              </div>
+            </Card>
+
+            <Card icon="plus" subtitle="A rotina envia a pergunta automaticamente" title="Novo agendamento">
+              <Field label="Pergunta">
+                <select
+                  onChange={(event) => setForm((current) => ({ ...current, questionId: event.target.value }))}
+                  value={form.questionId}
+                >
+                  {questions.map((question) => (
+                    <option key={question.id} value={question.id}>
+                      {question.title}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Rótulo">
+                <input
+                  onChange={(event) => setForm((current) => ({ ...current, label: event.target.value }))}
+                  placeholder="Ex.: Dor — manhã"
+                  value={form.label}
+                />
+              </Field>
+              <div className={ui.fieldGrid}>
+                <Field label="Horário">
+                  <input
+                    onChange={(event) => setForm((current) => ({ ...current, time: event.target.value }))}
+                    type="time"
+                    value={form.time}
+                  />
+                </Field>
+                <Field label="Fuso horário">
+                  <input
+                    onChange={(event) => setForm((current) => ({ ...current, timezone: event.target.value }))}
+                    value={form.timezone}
+                  />
+                </Field>
+              </div>
+              <span className={ui.hint}>
+                Dias: {form.daysOfWeek.map((day) => weekdayLabels[day]).join(", ")}
+              </span>
+              <button
+                className={cn(ui.btn, ui.btnPrimary, ui.btnBlock)}
+                disabled={busy}
+                onClick={handleAddSchedule}
+                type="button"
+              >
+                <Icon name="plus" />
+                {busy ? "Salvando..." : "Adicionar agendamento"}
+              </button>
+            </Card>
+          </div>
+
+          <Card icon="calendar" subtitle={`${details.schedules.length} rotina(s) configurada(s)`} title="Rotinas agendadas">
+            {details.schedules.length ? (
+              <div className={ui.stackSm}>
+                {details.schedules.map((schedule) => (
+                  <article className={ui.softBox} key={schedule.id} style={{ background: "#fff" }}>
+                    <div className={ui.stackSm}>
+                      <div className={ui.cardHead}>
+                        <div className={ui.tagRow}>
+                          <strong style={{ fontSize: 16 }}>{schedule.label || schedule.question?.title || "Rotina"}</strong>
+                          {schedule.active ? (
+                            <Tag icon="play" tone="success">
+                              Ativa
+                            </Tag>
+                          ) : (
+                            <Tag icon="pause" tone="neutral">
+                              Pausada
+                            </Tag>
+                          )}
+                        </div>
+                        <button
+                          aria-label="Remover rotina"
+                          className={cn(ui.btn, ui.btnDanger, ui.btnIcon)}
+                          onClick={() => onDeleteSchedule(details.patient.id, schedule.id)}
+                          title="Remover rotina"
+                          type="button"
+                        >
+                          <Icon name="trash" />
+                        </button>
+                      </div>
+                      <span className={ui.listMeta}>
+                        Pergunta: {schedule.question?.title ?? "Pergunta removida"}
+                      </span>
+                      <div className={ui.metaRow}>
+                        <span>
+                          <Icon name="clock" />
+                          {schedule.time}
                         </span>
-                        <div className={styles.profileResponseMeta}>
-                          <strong>
-                            {message.direction === "outbound" ? "Mensagem enviada" : "Resposta recebida"}
-                          </strong>
-                          <div className={styles.profileResponseHeaderBadges}>
-                            <span className={styles.profileResponseTypeBadge}>{message.type}</span>
-                            <span className={styles.profileResponseTypeBadge}>{message.status}</span>
-                            <span className={styles.profileResponseTypeBadge}>{message.channel}</span>
-                          </div>
-                        </div>
+                        <span>
+                          <Icon name="calendar" />
+                          {schedule.daysOfWeek.map((day) => weekdayLabels[day]).join(", ")}
+                        </span>
+                        <span>{schedule.timezone}</span>
                       </div>
-                      <div className={styles.profileResponseTextBlock}>
-                        <small>
-                          Conteudo • {new Date(
-                            message.receivedAt ?? message.sentAt ?? Date.now()
-                          ).toLocaleString("pt-BR")}
-                        </small>
-                        <p>{message.body}</p>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-            </>
-          )}
-
-          {activeTab === "plan" && (
-            <>
-              <section className={styles.profileSectionCard}>
-                <div className={styles.profileCardToolbar}>
-                  <h2>Agendamentos ativos</h2>
-                </div>
-                <div className={styles.profilePlanList}>
-                  {details.schedules.map((schedule) => (
-                    <article key={schedule.id} className={styles.profilePlanCard}>
-                      <div className={styles.profilePlanCardHead}>
-                        <div>
-                          <strong>{schedule.label}</strong>
-                          <div className={styles.profileInlineBadges}>
-                            <span className={styles.profileTextBadge}>{schedule.time}</span>
-                            <span className={styles.profileTextBadge}>
-                              {schedule.question?.title ?? "Pergunta removida"}
-                            </span>
-                            <span className={styles.profileTextBadge}>
-                              {channelLabel(details.patient.preferredChannel)}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className={styles.profileActionButtons}>
-                          <button
-                            className={styles.tableButton}
-                            onClick={() =>
-                              onSendMessage(details.patient.id, { questionId: schedule.questionId })
-                            }
-                            type="button"
-                          >
-                            Enviar agora
-                          </button>
-                          <button
-                            className={styles.tableButton}
-                            onClick={() =>
-                              onSendMessage(details.patient.id, {
-                                questionId: schedule.questionId,
-                                channel: "telegram"
-                              })
-                            }
-                            type="button"
-                          >
-                            Enviar no Telegram
-                          </button>
-                          <button
-                            className={styles.tableButton}
-                            onClick={() => onDeleteSchedule(details.patient.id, schedule.id)}
-                            type="button"
-                          >
-                            Remover
-                          </button>
-                        </div>
-                      </div>
-                      <div className={styles.profilePlanMeta}>
-                        <div>
-                          <span>Dias</span>
-                          <p>{schedule.daysOfWeek.join(", ")}</p>
-                        </div>
-                        <div>
-                          <span>Timezone</span>
-                          <p>{schedule.timezone}</p>
-                        </div>
-                        <div>
-                          <span>Status</span>
-                          <p>{schedule.active ? "Ativo" : "Pausado"}</p>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-
-              <section className={styles.profileSectionCard}>
-                <h3>Criar novo agendamento</h3>
-                <div className={styles.profileInfoGrid}>
-                  <label className={styles.field}>
-                    <span>Pergunta</span>
-                    <select
-                      onChange={(event) => setForm((current) => ({ ...current, questionId: event.target.value }))}
-                      value={form.questionId}
-                    >
-                      {questions.map((question) => (
-                        <option key={question.id} value={question.id}>
-                          {question.title}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className={styles.field}>
-                    <span>Rotulo</span>
-                    <input
-                      onChange={(event) => setForm((current) => ({ ...current, label: event.target.value }))}
-                      value={form.label}
-                    />
-                  </label>
-                  <label className={styles.field}>
-                    <span>Horario</span>
-                    <input
-                      onChange={(event) => setForm((current) => ({ ...current, time: event.target.value }))}
-                      type="time"
-                      value={form.time}
-                    />
-                  </label>
-                  <label className={styles.field}>
-                    <span>Timezone</span>
-                    <input
-                      onChange={(event) => setForm((current) => ({ ...current, timezone: event.target.value }))}
-                      value={form.timezone}
-                    />
-                  </label>
-                </div>
-                <button className={styles.primaryButton} disabled={busy} onClick={handleAddSchedule} type="button">
-                  {busy ? "Salvando..." : "Adicionar agendamento"}
-                </button>
-              </section>
-            </>
-          )}
-
-          {activeTab === "team" && (
-            <section className={styles.profileSectionCard}>
-              <h2>Equipe ligada ao paciente</h2>
-              <div className={styles.profileTeamGrid}>
-                {(teamMembers.length ? teamMembers : users.slice(0, 1)).map((member) => (
-                  <article key={member.id} className={styles.profileTeamCard}>
-                    <div className={styles.profileTeamCardTop}>
-                      <span className={styles.profileAvatar} aria-hidden="true" />
-                      <div className={styles.profileTeamIdentity}>
-                        <strong>{member.name}</strong>
-                        <small>{member.specialty}</small>
-                        <span className={styles.profileResponseTypeBadge}>{member.role}</span>
+                      <div className={ui.actions}>
+                        <button
+                          className={cn(ui.btn, ui.btnSecondary, ui.btnSm)}
+                          onClick={() => onSendMessage(details.patient.id, { questionId: schedule.questionId })}
+                          type="button"
+                        >
+                          <Icon name="send" />
+                          Enviar agora
+                        </button>
+                        <button
+                          className={cn(ui.btn, ui.btnSecondary, ui.btnSm)}
+                          onClick={() =>
+                            onSendMessage(details.patient.id, {
+                              questionId: schedule.questionId,
+                              channel: "telegram"
+                            })
+                          }
+                          type="button"
+                        >
+                          Enviar no Telegram
+                        </button>
                       </div>
                     </div>
                   </article>
                 ))}
               </div>
-            </section>
-          )}
+            ) : (
+              <EmptyState
+                description="Crie um agendamento para enviar perguntas automaticamente."
+                icon="calendar"
+                title="Nenhuma rotina agendada"
+              />
+            )}
+          </Card>
+        </div>
+      )}
 
-          {activeTab === "reports" && (
-            <ReportsScreen
-              embeddedPatientId={details.patient.id}
-              onGenerateReport={onGenerateReport}
-            />
-          )}
+      {activeTab === "team" && (
+        <Card icon="patients" subtitle="Profissionais responsáveis pelo acompanhamento deste paciente" title="Equipe do paciente">
+          <div className={ui.kpiRow}>
+            {(teamMembers.length ? teamMembers : users.slice(0, 1)).map((member) => (
+              <article className={ui.kpi} key={member.id}>
+                <div className={ui.cellUser}>
+                  <Avatar name={member.name} />
+                  <div>
+                    <strong>{member.name}</strong>
+                    <small>{member.specialty || "Especialidade não informada"}</small>
+                  </div>
+                </div>
+                <div className={ui.tagRow}>
+                  <Tag icon="check" tone="info">
+                    Responsável principal
+                  </Tag>
+                  <span className={ui.pill}>{roleLabel[member.role] ?? member.role}</span>
+                </div>
+                <span className={cn(ui.small, ui.muted)}>{member.email}</span>
+              </article>
+            ))}
+          </div>
+        </Card>
+      )}
 
-          {activeTab === "conduct" && (
-            <section className={styles.profileSectionCard}>
-              <h2>Alertas do paciente</h2>
-              <div className={styles.profileAlertsList}>
-                {details.alerts.map((alert) => (
-                  <article key={alert.id} className={styles.profileAlertCard}>
-                    <div className={styles.profileAlertLine} />
-                    <div className={styles.profileAlertContent}>
-                      <strong>{alert.title}</strong>
-                      <p>{alert.description}</p>
-                    </div>
-                    {alert.status === "active" ? (
-                      <button className={styles.tableButton} onClick={() => onResolveAlert(alert.id)} type="button">
-                        Resolver
-                      </button>
-                    ) : (
-                      <span className={styles.profileResponseTypeBadge}>Resolvido</span>
-                    )}
-                  </article>
-                ))}
-              </div>
-            </section>
+      {activeTab === "reports" && (
+        <ReportsScreen embeddedPatientId={details.patient.id} onGenerateReport={onGenerateReport} />
+      )}
+
+      {activeTab === "conduct" && (
+        <div className={ui.stackSm}>
+          {details.alerts.length ? (
+            details.alerts.map(renderAlert)
+          ) : (
+            <Card>
+              <EmptyState icon="check" title="Nenhum alerta para este paciente" />
+            </Card>
           )}
         </div>
-      </section>
-    </section>
+      )}
+    </>
   );
 }
